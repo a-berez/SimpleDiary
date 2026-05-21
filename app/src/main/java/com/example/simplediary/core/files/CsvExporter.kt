@@ -1,5 +1,7 @@
 package com.example.simplediary.core.files
 
+import android.net.Uri
+
 interface CsvExporter {
-    suspend fun exportAllData(destinationDirectoryPath: String): List<String>
+    suspend fun exportAllData(destinationZipUri: Uri): Uri
 }

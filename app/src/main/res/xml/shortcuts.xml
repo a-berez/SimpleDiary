@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="add_meal"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_meal"
+        android:shortcutShortLabel="@string/shortcut_add_meal"
+        android:shortcutLongLabel="@string/shortcut_add_meal">
+        <intent
+            android:action="com.example.simplediary.action.ADD_MEAL"
+            android:targetPackage="com.example.simplediary"
+            android:targetClass="com.example.simplediary.MainActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="add_workout"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_workout"
+        android:shortcutShortLabel="@string/shortcut_add_workout"
+        android:shortcutLongLabel="@string/shortcut_add_workout">
+        <intent
+            android:action="com.example.simplediary.action.ADD_WORKOUT"
+            android:targetPackage="com.example.simplediary"
+            android:targetClass="com.example.simplediary.MainActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="add_note"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_note"
+        android:shortcutShortLabel="@string/shortcut_add_note"
+        android:shortcutLongLabel="@string/shortcut_add_note">
+        <intent
+            android:action="com.example.simplediary.action.ADD_NOTE"
+            android:targetPackage="com.example.simplediary"
+            android:targetClass="com.example.simplediary.MainActivity" />
+    </shortcut>
+</shortcuts>

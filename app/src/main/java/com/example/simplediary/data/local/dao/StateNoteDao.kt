@@ -38,4 +38,7 @@ interface StateNoteDao {
         fromEpochMillisInclusive: Long? = null,
         toEpochMillisInclusive: Long? = null,
     ): Flow<List<StateNoteEntity>>
+
+    @Query("SELECT * FROM state_notes ORDER BY timestampEpochMillis DESC")
+    suspend fun getAllStateNotes(): List<StateNoteEntity>
 }

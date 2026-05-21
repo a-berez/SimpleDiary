@@ -7,13 +7,13 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "daily_targets",
     indices = [
-        Index(value = ["dateEpochMillisUtcStart"], unique = true),
+        Index(value = ["effectiveFrom"]),
     ],
 )
 data class DailyTargetEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
-    val dateEpochMillisUtcStart: Long,
+    val effectiveFrom: Long,
     val targetProteinsGrams: Double,
     val targetFatsGrams: Double,
     val targetCarbsGrams: Double,

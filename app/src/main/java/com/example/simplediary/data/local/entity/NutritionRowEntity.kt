@@ -23,8 +23,9 @@ data class NutritionRowEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
     val mealId: Long,
-    val proteinsGrams: Double,
-    val fatsGrams: Double,
-    val carbsGrams: Double,
-    val caloriesKcal: Double,
+    val itemName: String,
+    val proteinsGrams: Double?,
+    val fatsGrams: Double?,
+    val carbsGrams: Double?,
+    val caloriesKcal: Double?,
 )

@@ -15,9 +15,38 @@ interface FeedDao {
                 'MEAL' AS entryType,
                 m.timestampEpochMillis AS timestampEpochMillis,
                 m.text AS title,
-                NULL AS subtitle,
-                m.photoPath AS photoPath,
-                NULL AS workoutType
+                (
+                    SELECT
+                        ('Items: ' || COUNT(*) ||
+                        ' • K:' || CAST(ROUND(COALESCE(SUM(nr.caloriesKcal), 0.0), 0) AS INTEGER) ||
+                        ' P:' || CAST(ROUND(COALESCE(SUM(nr.proteinsGrams), 0.0), 0) AS INTEGER) ||
+                        ' F:' || CAST(ROUND(COALESCE(SUM(nr.fatsGrams), 0.0), 0) AS INTEGER) ||
+                        ' C:' || CAST(ROUND(COALESCE(SUM(nr.carbsGrams), 0.0), 0) AS INTEGER))
+                    FROM nutrition_rows nr
+                    WHERE nr.mealId = m.id
+                ) AS subtitle,
+                (
+                    SELECT
+                        COALESCE(
+                            GROUP_CONCAT(
+                                COALESCE(NULLIF(TRIM(nr.itemName), ''), 'Item') ||
+                                ' - K:' || CAST(ROUND(COALESCE(nr.caloriesKcal, 0.0), 0) AS INTEGER) ||
+                                ' P:' || CAST(ROUND(COALESCE(nr.proteinsGrams, 0.0), 0) AS INTEGER) ||
+                                ' F:' || CAST(ROUND(COALESCE(nr.fatsGrams, 0.0), 0) AS INTEGER) ||
+                                ' C:' || CAST(ROUND(COALESCE(nr.carbsGrams, 0.0), 0) AS INTEGER),
+                                CHAR(10)
+                            ),
+                            'No nutrition rows'
+                        ) ||
+                        CHAR(10) || CHAR(10) ||
+                        'Total - K:' || CAST(ROUND(COALESCE(SUM(nr.caloriesKcal), 0.0), 0) AS INTEGER) ||
+                        ' P:' || CAST(ROUND(COALESCE(SUM(nr.proteinsGrams), 0.0), 0) AS INTEGER) ||
+                        ' F:' || CAST(ROUND(COALESCE(SUM(nr.fatsGrams), 0.0), 0) AS INTEGER) ||
+                        ' C:' || CAST(ROUND(COALESCE(SUM(nr.carbsGrams), 0.0), 0) AS INTEGER)
+                    FROM nutrition_rows nr
+                    WHERE nr.mealId = m.id
+                ) AS expandedDetails,
+                m.photoPath AS photoPath
             FROM meals m
 
             UNION ALL
@@ -26,11 +55,17 @@ interface FeedDao {
                 w.id AS entryId,
                 'WORKOUT' AS entryType,
                 w.dateEpochMillisUtcStart AS timestampEpochMillis,
-                w.type AS title,
-                ('Duration: ' || w.durationMinutes || ' min, Calories: ' || w.caloriesBurned || ' kcal') AS subtitle,
-                NULL AS photoPath,
-                w.type AS workoutType
+                COALESCE(wt.name, wc.name, 'Workout') AS title,
+                ('Duration: ' || w.durationMinutes || ' min') AS subtitle,
+                ('Category: ' || COALESCE(wc.name, '-') || CHAR(10) ||
+                 'Type: ' || COALESCE(wt.name, '-') || CHAR(10) ||
+                 'Duration: ' || w.durationMinutes || ' min' || CHAR(10) ||
+                 'Calories burned: ' || CAST(ROUND(COALESCE(w.caloriesBurned, 0.0), 0) AS INTEGER) || CHAR(10) ||
+                 'Note: ' || COALESCE(NULLIF(TRIM(w.note), ''), '-')) AS expandedDetails,
+                NULL AS photoPath
             FROM workouts w
+            LEFT JOIN workout_categories wc ON wc.id = w.categoryId
+            LEFT JOIN workout_types wt ON wt.id = w.typeId
 
             UNION ALL
 
@@ -40,8 +75,8 @@ interface FeedDao {
                 s.timestampEpochMillis AS timestampEpochMillis,
                 s.text AS title,
                 NULL AS subtitle,
-                s.photoPath AS photoPath,
-                NULL AS workoutType
+                s.text AS expandedDetails,
+                s.photoPath AS photoPath
             FROM state_notes s
         )
         WHERE (:fromEpochMillisInclusive IS NULL OR timestampEpochMillis >= :fromEpochMillisInclusive)
@@ -51,7 +86,6 @@ interface FeedDao {
               (entryType = 'WORKOUT' AND :includeWorkouts = 1) OR
               (entryType = 'STATE_NOTE' AND :includeStateNotes = 1)
           )
-          AND (entryType != 'WORKOUT' OR :workoutType IS NULL OR workoutType = :workoutType)
         ORDER BY timestampEpochMillis DESC
         """
     )
@@ -59,7 +93,6 @@ interface FeedDao {
         includeMeals: Boolean,
         includeWorkouts: Boolean,
         includeStateNotes: Boolean,
-        workoutType: String? = null,
         fromEpochMillisInclusive: Long? = null,
         toEpochMillisInclusive: Long? = null,
     ): Flow<List<FeedDbRow>>

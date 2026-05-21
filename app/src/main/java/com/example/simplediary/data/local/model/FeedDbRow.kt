@@ -6,6 +6,6 @@ data class FeedDbRow(
     val timestampEpochMillis: Long,
     val title: String,
     val subtitle: String?,
+    val expandedDetails: String?,
     val photoPath: String?,
-    val workoutType: String?,
 )

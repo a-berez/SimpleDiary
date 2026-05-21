@@ -47,6 +47,10 @@ interface MealDao {
         toEpochMillisInclusive: Long? = null,
     ): Flow<List<MealWithNutritionRows>>
 
+    @Transaction
+    @Query("SELECT * FROM meals ORDER BY timestampEpochMillis DESC")
+    suspend fun getAllMealsWithNutritionRows(): List<MealWithNutritionRows>
+
     @Query(
         """
         SELECT

@@ -8,7 +8,6 @@ import androidx.room.Query
 import androidx.room.Update
 import com.example.simplediary.data.local.entity.WorkoutEntity
 import com.example.simplediary.data.local.model.WeeklyWorkoutStatsDbRow
-import com.example.simplediary.domain.model.WorkoutType
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -33,15 +32,20 @@ interface WorkoutDao {
         SELECT * FROM workouts
         WHERE (:fromEpochMillisInclusive IS NULL OR dateEpochMillisUtcStart >= :fromEpochMillisInclusive)
           AND (:toEpochMillisInclusive IS NULL OR dateEpochMillisUtcStart <= :toEpochMillisInclusive)
-          AND (:workoutType IS NULL OR type = :workoutType)
+          AND (:categoryId IS NULL OR categoryId = :categoryId)
+          AND (:typeId IS NULL OR typeId = :typeId)
         ORDER BY dateEpochMillisUtcStart DESC
         """
     )
     fun observeWorkouts(
         fromEpochMillisInclusive: Long? = null,
         toEpochMillisInclusive: Long? = null,
-        workoutType: WorkoutType? = null,
+        categoryId: Long? = null,
+        typeId: Long? = null,
     ): Flow<List<WorkoutEntity>>
+
+    @Query("SELECT * FROM workouts ORDER BY dateEpochMillisUtcStart DESC")
+    suspend fun getAllWorkouts(): List<WorkoutEntity>
 
     @Query(
         """

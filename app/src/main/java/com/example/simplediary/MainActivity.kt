@@ -1,47 +1,63 @@
 package com.example.simplediary
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.example.simplediary.app.SimpleDiaryApplication
+import com.example.simplediary.ui.feed.FeedViewModel
+import com.example.simplediary.ui.SimpleDiaryApp
+import com.example.simplediary.ui.navigation.SimpleDiaryDestination
 import com.example.simplediary.ui.theme.SimpleDiaryTheme
 
 class MainActivity : ComponentActivity() {
+    private var pendingShortcutRoute: String? by mutableStateOf(null)
+
+    private val feedViewModel: FeedViewModel by viewModels {
+        FeedViewModel.factory(
+            journalRepository = (application as SimpleDiaryApplication).journalRepository,
+            context = applicationContext,
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingShortcutRoute = resolveShortcutRoute(intent)
         enableEdgeToEdge()
         setContent {
             SimpleDiaryTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                SimpleDiaryApp(
+                    feedViewModel = feedViewModel,
+                    pendingShortcutRoute = pendingShortcutRoute,
+                    onShortcutConsumed = { pendingShortcutRoute = null },
+                )
             }
         }
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingShortcutRoute = resolveShortcutRoute(intent)
+    }
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    SimpleDiaryTheme {
-        Greeting("Android")
+    private fun resolveShortcutRoute(intent: Intent?): String? {
+        return when (intent?.action) {
+            ACTION_SHORTCUT_ADD_MEAL -> SimpleDiaryDestination.MealEditor.createRoute()
+            ACTION_SHORTCUT_ADD_WORKOUT -> SimpleDiaryDestination.WorkoutEditor.createRoute()
+            ACTION_SHORTCUT_ADD_NOTE -> SimpleDiaryDestination.StateNoteEditor.createRoute()
+            else -> null
+        }
+    }
+
+    companion object {
+        const val ACTION_SHORTCUT_ADD_MEAL = "com.example.simplediary.action.ADD_MEAL"
+        const val ACTION_SHORTCUT_ADD_WORKOUT = "com.example.simplediary.action.ADD_WORKOUT"
+        const val ACTION_SHORTCUT_ADD_NOTE = "com.example.simplediary.action.ADD_NOTE"
     }
 }

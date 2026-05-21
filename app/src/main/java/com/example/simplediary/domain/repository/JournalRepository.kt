@@ -18,5 +18,6 @@ data class FeedRow(
     val timestampEpochMillis: Long,
     val title: String,
     val subtitle: String? = null,
+    val expandedDetails: String? = null,
     val photoPath: String? = null,
 )

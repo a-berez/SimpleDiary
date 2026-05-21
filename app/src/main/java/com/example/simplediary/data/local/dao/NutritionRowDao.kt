@@ -20,4 +20,7 @@ interface NutritionRowDao {
 
     @Query("SELECT * FROM nutrition_rows WHERE mealId = :mealId ORDER BY id ASC")
     fun observeByMealId(mealId: Long): Flow<List<NutritionRowEntity>>
+
+    @Query("SELECT * FROM nutrition_rows WHERE mealId = :mealId ORDER BY id ASC")
+    suspend fun getByMealId(mealId: Long): List<NutritionRowEntity>
 }
