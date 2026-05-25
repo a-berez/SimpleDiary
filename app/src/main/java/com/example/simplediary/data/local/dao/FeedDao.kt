@@ -14,7 +14,21 @@ interface FeedDao {
                 m.id AS entryId,
                 'MEAL' AS entryType,
                 m.timestampEpochMillis AS timestampEpochMillis,
-                m.text AS title,
+                COALESCE(
+                    NULLIF(
+                        (
+                            SELECT GROUP_CONCAT(
+                                COALESCE(NULLIF(TRIM(nr.itemName), ''), 'Item'),
+                                ', '
+                            )
+                            FROM nutrition_rows nr
+                            WHERE nr.mealId = m.id
+                        ),
+                        ''
+                    ),
+                    NULLIF(TRIM(m.text), ''),
+                    'Meal'
+                ) AS title,
                 (
                     SELECT
                         ('Items: ' || COUNT(*) ||
@@ -27,22 +41,23 @@ interface FeedDao {
                 ) AS subtitle,
                 (
                     SELECT
-                        COALESCE(
-                            GROUP_CONCAT(
-                                COALESCE(NULLIF(TRIM(nr.itemName), ''), 'Item') ||
-                                ' - K:' || CAST(ROUND(COALESCE(nr.caloriesKcal, 0.0), 0) AS INTEGER) ||
-                                ' P:' || CAST(ROUND(COALESCE(nr.proteinsGrams, 0.0), 0) AS INTEGER) ||
-                                ' F:' || CAST(ROUND(COALESCE(nr.fatsGrams, 0.0), 0) AS INTEGER) ||
-                                ' C:' || CAST(ROUND(COALESCE(nr.carbsGrams, 0.0), 0) AS INTEGER),
-                                CHAR(10)
-                            ),
-                            'No nutrition rows'
-                        ) ||
-                        CHAR(10) || CHAR(10) ||
-                        'Total - K:' || CAST(ROUND(COALESCE(SUM(nr.caloriesKcal), 0.0), 0) AS INTEGER) ||
-                        ' P:' || CAST(ROUND(COALESCE(SUM(nr.proteinsGrams), 0.0), 0) AS INTEGER) ||
-                        ' F:' || CAST(ROUND(COALESCE(SUM(nr.fatsGrams), 0.0), 0) AS INTEGER) ||
-                        ' C:' || CAST(ROUND(COALESCE(SUM(nr.carbsGrams), 0.0), 0) AS INTEGER)
+                        TRIM(
+                            CASE
+                                WHEN NULLIF(TRIM(m.text), '') IS NULL THEN ''
+                                ELSE ('Note: ' || TRIM(m.text) || CHAR(10) || CHAR(10))
+                            END ||
+                            COALESCE(
+                                GROUP_CONCAT(
+                                    COALESCE(NULLIF(TRIM(nr.itemName), ''), 'Item') ||
+                                    ' - K:' || CAST(ROUND(COALESCE(nr.caloriesKcal, 0.0), 0) AS INTEGER) ||
+                                    ' P:' || CAST(ROUND(COALESCE(nr.proteinsGrams, 0.0), 0) AS INTEGER) ||
+                                    ' F:' || CAST(ROUND(COALESCE(nr.fatsGrams, 0.0), 0) AS INTEGER) ||
+                                    ' C:' || CAST(ROUND(COALESCE(nr.carbsGrams, 0.0), 0) AS INTEGER),
+                                    CHAR(10)
+                                ),
+                                'No nutrition rows'
+                            )
+                        )
                     FROM nutrition_rows nr
                     WHERE nr.mealId = m.id
                 ) AS expandedDetails,

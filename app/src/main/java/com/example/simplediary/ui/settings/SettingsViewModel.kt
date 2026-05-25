@@ -28,8 +28,6 @@ class SettingsViewModel(
     private val dailyTargetDao = app.appDatabase.dailyTargetDao()
     private val workoutCategoryDao = app.appDatabase.workoutCategoryDao()
     private val workoutTypeDao = app.appDatabase.workoutTypeDao()
-    private val csvExporter = app.csvExporter
-    private val backupManager = app.backupManager
 
     private val zoneId = ZoneId.systemDefault()
     private val todayStartEpochMillis = LocalDate.now(zoneId).atStartOfDay(zoneId).toInstant().toEpochMilli()
@@ -191,7 +189,7 @@ class SettingsViewModel(
 
     fun exportCsv(destinationUri: Uri) {
         viewModelScope.launch {
-            runCatching { csvExporter.exportAllData(destinationUri) }
+            runCatching { app.csvExporter.exportAllData(destinationUri) }
                 .onSuccess { _events.emit(SettingsEvent.Message("CSV export completed")) }
                 .onFailure { throwable ->
                     _events.emit(SettingsEvent.Message(throwable.message ?: "CSV export failed"))
@@ -201,7 +199,7 @@ class SettingsViewModel(
 
     fun backupZip(destinationUri: Uri) {
         viewModelScope.launch {
-            runCatching { backupManager.createZipBackup(destinationUri) }
+            runCatching { app.backupManager.createZipBackup(destinationUri) }
                 .onSuccess { _events.emit(SettingsEvent.Message("Backup ZIP created")) }
                 .onFailure { throwable ->
                     _events.emit(SettingsEvent.Message(throwable.message ?: "Backup failed"))
@@ -211,7 +209,7 @@ class SettingsViewModel(
 
     fun restoreZip(sourceUri: Uri) {
         viewModelScope.launch {
-            runCatching { backupManager.restoreFromZip(sourceUri) }
+            runCatching { app.backupManager.restoreFromZip(sourceUri) }
                 .onSuccess { _events.emit(SettingsEvent.Message("Restore completed")) }
                 .onFailure { throwable ->
                     _events.emit(SettingsEvent.Message(throwable.message ?: "Restore failed"))

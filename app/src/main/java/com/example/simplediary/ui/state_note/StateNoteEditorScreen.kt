@@ -317,7 +317,8 @@ private fun rememberBitmap(path: String): ImageBitmap? {
 }
 
 private fun createCameraOutputUri(context: android.content.Context): Uri {
-    val outputFile = File(context.cacheDir, "camera_${UUID.randomUUID()}.jpg")
+    val cameraDir = File(context.cacheDir, "camera_cache").apply { mkdirs() }
+    val outputFile = File(cameraDir, "camera_${UUID.randomUUID()}.jpg")
     return FileProvider.getUriForFile(
         context,
         "${context.packageName}.fileprovider",

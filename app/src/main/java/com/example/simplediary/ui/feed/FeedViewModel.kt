@@ -46,8 +46,8 @@ class FeedViewModel(
 
     val uiState: StateFlow<FeedUiState> = combine(filtersState, feedItemsFlow, sortOrderState) { filters, items, sortOrder ->
         val sortedItems = when (sortOrder) {
-            FeedSortOrder.NEWEST_FIRST -> items.sortedByDescending { it.timestampEpochMillis }
-            FeedSortOrder.OLDEST_FIRST -> items.sortedBy { it.timestampEpochMillis }
+            FeedSortOrder.NEWEST_FIRST -> items
+            FeedSortOrder.OLDEST_FIRST -> items.asReversed()
         }
         FeedUiState(
             items = sortedItems,

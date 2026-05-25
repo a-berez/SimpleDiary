@@ -2,5 +2,5 @@
 <paths>
     <cache-path
         name="camera_cache"
-        path="." />
+        path="camera_cache/" />
 </paths>

@@ -77,6 +77,12 @@ class SafBackupManager(
                                     val relativePath = entry.name.removePrefix("photos/")
                                     if (relativePath.isNotBlank()) {
                                         val targetFile = File(photosDir, relativePath)
+                                        val photosRootPath = photosDir.canonicalPath + File.separator
+                                        if (!targetFile.canonicalPath.startsWith(photosRootPath)) {
+                                            zipInput.closeEntry()
+                                            entry = zipInput.nextEntry
+                                            continue
+                                        }
                                         writeZipEntryToFile(zipInput, targetFile)
                                     }
                                 }

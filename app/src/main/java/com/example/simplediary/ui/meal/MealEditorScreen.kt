@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
@@ -52,6 +53,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -407,6 +409,7 @@ private fun NutritionRowEditor(
                     modifier = Modifier.weight(1f),
                     label = { Text("Calories") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
                 OutlinedTextField(
                     value = row.proteins,
@@ -414,6 +417,7 @@ private fun NutritionRowEditor(
                     modifier = Modifier.weight(1f),
                     label = { Text("Proteins") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
             }
 
@@ -424,6 +428,7 @@ private fun NutritionRowEditor(
                     modifier = Modifier.weight(1f),
                     label = { Text("Fats") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
                 OutlinedTextField(
                     value = row.carbs,
@@ -431,6 +436,7 @@ private fun NutritionRowEditor(
                     modifier = Modifier.weight(1f),
                     label = { Text("Carbs") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
             }
         }
@@ -498,7 +504,8 @@ private fun rememberBitmap(path: String): ImageBitmap? {
 }
 
 private fun createCameraOutputUri(context: android.content.Context): Uri {
-    val outputFile = File(context.cacheDir, "camera_${UUID.randomUUID()}.jpg")
+    val cameraDir = File(context.cacheDir, "camera_cache").apply { mkdirs() }
+    val outputFile = File(cameraDir, "camera_${UUID.randomUUID()}.jpg")
     return FileProvider.getUriForFile(
         context,
         "${context.packageName}.fileprovider",

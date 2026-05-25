@@ -41,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -83,6 +84,10 @@ fun FeedScreen(
     var isFabMenuExpanded by remember { mutableStateOf(false) }
     var isCustomDateDialogVisible by remember { mutableStateOf(false) }
     val expandedIds = remember { mutableStateOf(setOf<String>()) }
+    val currentFilter = uiState.selectedEntryTypes to uiState.selectedDateSelection
+    LaunchedEffect(currentFilter) {
+        expandedIds.value = emptySet()
+    }
     val dateRangePickerState = rememberDateRangePickerState(
         initialSelectedStartDateMillis = uiState.selectedDateSelection.customStartEpochMillis,
         initialSelectedEndDateMillis = uiState.selectedDateSelection.customEndEpochMillis,
@@ -547,10 +552,9 @@ private fun FeedDateSelection.customChipLabel(): String {
 }
 
 private fun formatDateTime(epochMillis: Long): String {
-    val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm")
     return Instant.ofEpochMilli(epochMillis)
         .atZone(ZoneId.systemDefault())
-        .format(formatter)
+        .format(FEED_DATE_TIME_FORMATTER)
 }
 
 @Composable
@@ -602,4 +606,7 @@ private fun Long.formatDayShort(): String {
         .toLocalDate()
         .format(DateTimeFormatter.ofPattern("dd MMM"))
 }
+
+private val FEED_DATE_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm")
 
