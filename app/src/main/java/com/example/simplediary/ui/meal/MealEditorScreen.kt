@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -174,6 +175,7 @@ fun MealEditorScreen(
                     label = { Text("Text note (optional)") },
                     minLines = 3,
                     maxLines = 6,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 )
             }
 
@@ -400,6 +402,7 @@ private fun NutritionRowEditor(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Name / description") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -6,6 +6,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.simplediary.app.SimpleDiaryApplication
+import com.example.simplediary.core.settings.DEFAULT_NOTE_CATEGORIES
+import com.example.simplediary.core.settings.loadNoteCategories
+import com.example.simplediary.core.settings.saveNoteCategories
 import com.example.simplediary.data.local.entity.DailyTargetEntity
 import com.example.simplediary.data.local.entity.WorkoutCategoryEntity
 import com.example.simplediary.data.local.entity.WorkoutTypeEntity
@@ -28,18 +31,21 @@ class SettingsViewModel(
     private val dailyTargetDao = app.appDatabase.dailyTargetDao()
     private val workoutCategoryDao = app.appDatabase.workoutCategoryDao()
     private val workoutTypeDao = app.appDatabase.workoutTypeDao()
+    private val preferences = application.getSharedPreferences(NOTE_CATEGORIES_PREFS, Application.MODE_PRIVATE)
 
     private val zoneId = ZoneId.systemDefault()
     private val todayStartEpochMillis = LocalDate.now(zoneId).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
     private val targetInputs = MutableStateFlow(TargetInputs())
+    private val noteCategoriesState = MutableStateFlow(preferences.loadNoteCategories())
 
     val uiState: StateFlow<SettingsUiState> = combine(
         workoutCategoryDao.observeAllCategories(),
         workoutTypeDao.observeAllTypes(),
         dailyTargetDao.observeTargetEffectiveForDay(todayStartEpochMillis),
         targetInputs,
-    ) { categories, types, dailyTarget, inputs ->
+        noteCategoriesState,
+    ) { categories, types, dailyTarget, inputs, noteCategories ->
         val hydratedInputs = hydrateInputsFromTarget(inputs, dailyTarget)
         val categoriesUi = categories.map { category ->
             SettingsCategoryUi(
@@ -65,6 +71,7 @@ class SettingsViewModel(
             targetFats = hydratedInputs.fats,
             targetCarbs = hydratedInputs.carbs,
             categories = categoriesUi,
+            noteCategories = noteCategories,
             isBusy = hydratedInputs.isBusy,
         )
     }.stateIn(
@@ -187,6 +194,29 @@ class SettingsViewModel(
         }
     }
 
+    fun addNoteCategory(name: String) {
+        val normalized = name.trim()
+        if (normalized.isBlank()) return
+        updateNoteCategories(noteCategoriesState.value + normalized)
+    }
+
+    fun renameNoteCategory(oldName: String, newName: String) {
+        val oldNormalized = oldName.trim()
+        val newNormalized = newName.trim()
+        if (oldNormalized.isBlank() || newNormalized.isBlank()) return
+        val replaced = noteCategoriesState.value.map { current ->
+            if (current == oldNormalized) newNormalized else current
+        }
+        updateNoteCategories(replaced)
+    }
+
+    fun deleteNoteCategory(name: String) {
+        val normalized = name.trim()
+        if (normalized.isBlank()) return
+        val filtered = noteCategoriesState.value.filterNot { it == normalized }
+        updateNoteCategories(filtered)
+    }
+
     fun exportCsv(destinationUri: Uri) {
         viewModelScope.launch {
             runCatching { app.csvExporter.exportAllData(destinationUri) }
@@ -231,7 +261,16 @@ class SettingsViewModel(
         value = transform(value).copy(edited = true)
     }
 
+    private fun updateNoteCategories(categories: List<String>) {
+        val normalized = categories.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+            .ifEmpty { DEFAULT_NOTE_CATEGORIES }
+        noteCategoriesState.value = normalized
+        preferences.saveNoteCategories(normalized)
+    }
+
     companion object {
+        private const val NOTE_CATEGORIES_PREFS = "note_categories_preferences"
+
         fun factory(application: Application): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -252,6 +291,7 @@ data class SettingsUiState(
     val targetFats: String = "",
     val targetCarbs: String = "",
     val categories: List<SettingsCategoryUi> = emptyList(),
+    val noteCategories: List<String> = DEFAULT_NOTE_CATEGORIES,
     val isBusy: Boolean = false,
 )
 

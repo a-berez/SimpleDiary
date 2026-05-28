@@ -41,4 +41,14 @@ interface StateNoteDao {
 
     @Query("SELECT * FROM state_notes ORDER BY timestampEpochMillis DESC")
     suspend fun getAllStateNotes(): List<StateNoteEntity>
+
+    @Query(
+        """
+        SELECT DISTINCT category
+        FROM state_notes
+        WHERE TRIM(category) != ''
+        ORDER BY category COLLATE NOCASE
+        """
+    )
+    suspend fun getDistinctCategories(): List<String>
 }

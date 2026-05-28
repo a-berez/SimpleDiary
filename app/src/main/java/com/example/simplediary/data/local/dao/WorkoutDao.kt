@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.example.simplediary.data.local.entity.WorkoutEntity
+import com.example.simplediary.data.local.model.DailyWorkoutStatsDbRow
 import com.example.simplediary.data.local.model.WeeklyWorkoutStatsDbRow
 import kotlinx.coroutines.flow.Flow
 
@@ -50,13 +51,50 @@ interface WorkoutDao {
     @Query(
         """
         SELECT
+            :dayStartEpochMillisUtc AS dayStartEpochMillisUtc,
+            COUNT(*) AS totalWorkouts,
+            COALESCE(SUM(w.durationMinutes), 0) AS totalDurationMinutes,
+            COALESCE(SUM(w.caloriesBurned), 0) AS totalCaloriesBurned,
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN wc.name = 'Кардио' THEN COALESCE(w.distanceKm, 0.0)
+                        ELSE 0.0
+                    END
+                ),
+                0.0
+            ) AS totalCardioDistanceKm
+        FROM workouts w
+        LEFT JOIN workout_categories wc ON wc.id = w.categoryId
+        WHERE w.dateEpochMillisUtcStart >= :dayStartEpochMillisUtc
+          AND w.dateEpochMillisUtcStart < :dayEndEpochMillisUtcExclusive
+        """
+    )
+    fun observeDailyStats(
+        dayStartEpochMillisUtc: Long,
+        dayEndEpochMillisUtcExclusive: Long,
+    ): Flow<DailyWorkoutStatsDbRow>
+
+    @Query(
+        """
+        SELECT
             :weekStartEpochMillisUtc AS weekStartEpochMillisUtc,
             COUNT(*) AS totalWorkouts,
-            COALESCE(SUM(durationMinutes), 0) AS totalDurationMinutes,
-            COALESCE(SUM(caloriesBurned), 0) AS totalCaloriesBurned
-        FROM workouts
-        WHERE dateEpochMillisUtcStart >= :weekStartEpochMillisUtc
-          AND dateEpochMillisUtcStart < :weekEndEpochMillisUtcExclusive
+            COALESCE(SUM(w.durationMinutes), 0) AS totalDurationMinutes,
+            COALESCE(SUM(w.caloriesBurned), 0) AS totalCaloriesBurned,
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN wc.name = 'Кардио' THEN COALESCE(w.distanceKm, 0.0)
+                        ELSE 0.0
+                    END
+                ),
+                0.0
+            ) AS totalCardioDistanceKm
+        FROM workouts w
+        LEFT JOIN workout_categories wc ON wc.id = w.categoryId
+        WHERE w.dateEpochMillisUtcStart >= :weekStartEpochMillisUtc
+          AND w.dateEpochMillisUtcStart < :weekEndEpochMillisUtcExclusive
         """
     )
     fun observeWeeklyStats(

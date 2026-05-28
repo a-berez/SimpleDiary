@@ -5,4 +5,5 @@ data class WeeklyWorkoutStatsDbRow(
     val totalWorkouts: Int,
     val totalDurationMinutes: Int,
     val totalCaloriesBurned: Int,
+    val totalCardioDistanceKm: Double,
 )

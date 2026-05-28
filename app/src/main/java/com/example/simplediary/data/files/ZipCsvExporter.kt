@@ -118,10 +118,11 @@ class ZipCsvExporter(
         stateNotes: List<com.example.simplediary.data.local.entity.StateNoteEntity>
     ): String {
         val builder = StringBuilder()
-        builder.append("Дата;Текст\n")
+        builder.append("Дата;Категория;Текст\n")
         stateNotes.forEach { note ->
             builder.appendCsvRow(
                 formatTimestamp(note.timestampEpochMillis),
+                note.category,
                 note.text,
             )
         }

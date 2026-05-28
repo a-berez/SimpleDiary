@@ -58,6 +58,18 @@ object DatabaseInitializer {
         }
     }
 
+    val migration5To6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE workouts ADD COLUMN distanceKm REAL")
+        }
+    }
+
+    val migration6To7 = object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE state_notes ADD COLUMN category TEXT NOT NULL DEFAULT '🙂'")
+        }
+    }
+
     fun onCreate(db: SupportSQLiteDatabase) {
         createWorkoutMetadataTables(db)
         seedDefaultWorkoutMetadata(db)

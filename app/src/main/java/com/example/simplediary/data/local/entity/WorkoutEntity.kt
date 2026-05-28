@@ -35,5 +35,6 @@ data class WorkoutEntity(
     val typeId: Long?,
     val durationMinutes: Int,
     val caloriesBurned: Int,
+    val distanceKm: Double?,
     val note: String,
 )

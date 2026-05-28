@@ -25,6 +25,8 @@ import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -46,6 +48,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -64,6 +68,7 @@ fun StateNoteEditorScreen(
     contentPadding: PaddingValues,
     uiState: StateNoteUiState,
     onTimestampChanged: (Long) -> Unit,
+    onCategoryChanged: (String) -> Unit,
     onTextChanged: (String) -> Unit,
     onPhotoPicked: (Uri) -> Unit,
     onRemovePhoto: () -> Unit,
@@ -76,6 +81,7 @@ fun StateNoteEditorScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
     var pendingCropOutputUri by remember { mutableStateOf<Uri?>(null) }
+    var isCategoryMenuExpanded by remember { mutableStateOf(false) }
 
     val cropLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
@@ -147,6 +153,45 @@ fun StateNoteEditorScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
+                        text = "Category",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    OutlinedButton(
+                        onClick = { isCategoryMenuExpanded = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "Current: ${uiState.category.ifBlank { "🙂" }}",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = isCategoryMenuExpanded,
+                        onDismissRequest = { isCategoryMenuExpanded = false },
+                    ) {
+                        uiState.availableCategories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category) },
+                                onClick = {
+                                    isCategoryMenuExpanded = false
+                                    onCategoryChanged(category)
+                                },
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Categories are managed in Settings.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
                         text = "Photo (optional)",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Medium,
@@ -198,6 +243,7 @@ fun StateNoteEditorScreen(
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 4,
                     maxLines = 8,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 )
             }
 

@@ -13,6 +13,7 @@ import androidx.room.PrimaryKey
 data class StateNoteEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
+    val category: String,
     val text: String,
     val photoPath: String?,
     val timestampEpochMillis: Long,

@@ -422,10 +422,7 @@ private fun FeedEntryCard(
                                 .padding(top = 4.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            val expandedText = when (item.type) {
-                                EntryType.STATE_NOTE -> item.previewText
-                                else -> item.expandedDetails ?: item.details.orEmpty()
-                            }.trim()
+                            val expandedText = (item.expandedDetails ?: item.details.orEmpty()).trim()
                             if (expandedText.isNotEmpty()) {
                                 Text(
                                     text = expandedText,

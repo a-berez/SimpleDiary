@@ -28,7 +28,7 @@ import com.example.simplediary.data.local.entity.WorkoutTypeEntity
         StateNoteEntity::class,
         DailyTargetEntity::class,
     ],
-    version = 5,
+    version = 7,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

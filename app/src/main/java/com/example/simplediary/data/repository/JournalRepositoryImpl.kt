@@ -5,8 +5,10 @@ import com.example.simplediary.data.local.dao.FeedDao
 import com.example.simplediary.data.local.dao.MealDao
 import com.example.simplediary.data.local.dao.WorkoutDao
 import com.example.simplediary.domain.model.DailySummary
+import com.example.simplediary.domain.model.DailyWorkoutStats
 import com.example.simplediary.domain.model.EntryType
 import com.example.simplediary.domain.model.FeedFilter
+import com.example.simplediary.domain.model.WeeklyFoodSummary
 import com.example.simplediary.domain.model.WeeklyWorkoutStats
 import com.example.simplediary.domain.repository.FeedRow
 import com.example.simplediary.domain.repository.JournalRepository
@@ -73,17 +75,70 @@ class JournalRepositoryImpl(
         }
     }
 
+    override fun observeDailyWorkoutStats(dayEpochMillisUtcStart: Long): Flow<DailyWorkoutStats> {
+        val dayEndEpochMillisUtcExclusive = dayEpochMillisUtcStart + ONE_DAY_MILLIS
+        return workoutDao.observeDailyStats(
+            dayStartEpochMillisUtc = dayEpochMillisUtcStart,
+            dayEndEpochMillisUtcExclusive = dayEndEpochMillisUtcExclusive,
+        ).map { daily ->
+            DailyWorkoutStats(
+                dayStartEpochMillisUtc = dayEpochMillisUtcStart,
+                totalWorkouts = daily.totalWorkouts,
+                totalDurationMinutes = daily.totalDurationMinutes,
+                totalCaloriesBurned = daily.totalCaloriesBurned,
+                totalCardioDistanceKm = daily.totalCardioDistanceKm,
+            )
+        }
+    }
+
+    override fun observeWeeklyFoodSummary(weekStartEpochMillisUtc: Long): Flow<WeeklyFoodSummary> {
+        val weekEndEpochMillisUtcExclusive = weekStartEpochMillisUtc + ONE_WEEK_MILLIS
+        return observeFoodSummaryInRange(
+            fromEpochMillisInclusive = weekStartEpochMillisUtc,
+            toEpochMillisExclusive = weekEndEpochMillisUtcExclusive,
+        )
+    }
+
+    override fun observeFoodSummaryInRange(
+        fromEpochMillisInclusive: Long,
+        toEpochMillisExclusive: Long,
+    ): Flow<WeeklyFoodSummary> {
+        return mealDao.observeMacroTotalsInRange(
+            fromEpochMillisInclusive = fromEpochMillisInclusive,
+            toEpochMillisExclusive = toEpochMillisExclusive,
+        ).map { summary ->
+            WeeklyFoodSummary(
+                weekStartEpochMillisUtc = fromEpochMillisInclusive,
+                actualProteinsGrams = summary.actualProteinsGrams,
+                actualFatsGrams = summary.actualFatsGrams,
+                actualCarbsGrams = summary.actualCarbsGrams,
+                actualCaloriesKcal = summary.actualCaloriesKcal,
+            )
+        }
+    }
+
     override fun observeWeeklyWorkoutStats(weekStartEpochMillisUtc: Long): Flow<WeeklyWorkoutStats> {
         val weekEndEpochMillisUtcExclusive = weekStartEpochMillisUtc + ONE_WEEK_MILLIS
+        return observeWorkoutSummaryInRange(
+            fromEpochMillisInclusive = weekStartEpochMillisUtc,
+            toEpochMillisExclusive = weekEndEpochMillisUtcExclusive,
+        )
+    }
+
+    override fun observeWorkoutSummaryInRange(
+        fromEpochMillisInclusive: Long,
+        toEpochMillisExclusive: Long,
+    ): Flow<WeeklyWorkoutStats> {
         return workoutDao.observeWeeklyStats(
-            weekStartEpochMillisUtc = weekStartEpochMillisUtc,
-            weekEndEpochMillisUtcExclusive = weekEndEpochMillisUtcExclusive,
-        ).map { weekly ->
+            weekStartEpochMillisUtc = fromEpochMillisInclusive,
+            weekEndEpochMillisUtcExclusive = toEpochMillisExclusive,
+        ).map { summary ->
             WeeklyWorkoutStats(
-                weekStartEpochMillisUtc = weekStartEpochMillisUtc,
-                totalWorkouts = weekly.totalWorkouts,
-                totalDurationMinutes = weekly.totalDurationMinutes,
-                totalCaloriesBurned = weekly.totalCaloriesBurned,
+                weekStartEpochMillisUtc = fromEpochMillisInclusive,
+                totalWorkouts = summary.totalWorkouts,
+                totalDurationMinutes = summary.totalDurationMinutes,
+                totalCaloriesBurned = summary.totalCaloriesBurned,
+                totalCardioDistanceKm = summary.totalCardioDistanceKm,
             )
         }
     }

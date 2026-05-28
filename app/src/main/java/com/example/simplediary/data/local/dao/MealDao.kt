@@ -60,6 +60,24 @@ interface MealDao {
             COALESCE(SUM(nr.caloriesKcal), 0.0) AS actualCaloriesKcal
         FROM meals m
         LEFT JOIN nutrition_rows nr ON nr.mealId = m.id
+        WHERE m.timestampEpochMillis >= :fromEpochMillisInclusive
+          AND m.timestampEpochMillis < :toEpochMillisExclusive
+        """
+    )
+    fun observeMacroTotalsInRange(
+        fromEpochMillisInclusive: Long,
+        toEpochMillisExclusive: Long,
+    ): Flow<DailyMacroTotalsDbRow>
+
+    @Query(
+        """
+        SELECT
+            COALESCE(SUM(nr.proteinsGrams), 0.0) AS actualProteinsGrams,
+            COALESCE(SUM(nr.fatsGrams), 0.0) AS actualFatsGrams,
+            COALESCE(SUM(nr.carbsGrams), 0.0) AS actualCarbsGrams,
+            COALESCE(SUM(nr.caloriesKcal), 0.0) AS actualCaloriesKcal
+        FROM meals m
+        LEFT JOIN nutrition_rows nr ON nr.mealId = m.id
         WHERE m.timestampEpochMillis >= :dayStartEpochMillisUtc
           AND m.timestampEpochMillis < :dayEndEpochMillisUtcExclusive
         """

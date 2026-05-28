@@ -76,6 +76,10 @@ class WorkoutViewModel(
         _uiState.update { it.copy(caloriesBurned = calories) }
     }
 
+    fun onDistanceChanged(distanceKm: String) {
+        _uiState.update { it.copy(distanceKm = distanceKm) }
+    }
+
     fun onNoteChanged(note: String) {
         _uiState.update { it.copy(note = note) }
     }
@@ -94,6 +98,11 @@ class WorkoutViewModel(
                 return@launch
             }
             val calories = state.caloriesBurned.toIntOrNull() ?: 0
+            val distanceKm = state.distanceKm.toDoubleOrNull()
+            if (state.isCardioCategory && state.distanceKm.isNotBlank() && distanceKm == null) {
+                _events.emit(WorkoutEvent.Error("Distance must be a number"))
+                return@launch
+            }
 
             _uiState.update { it.copy(isBusy = true) }
             runCatching {
@@ -105,6 +114,7 @@ class WorkoutViewModel(
                             typeId = state.selectedTypeId,
                             durationMinutes = duration,
                             caloriesBurned = calories,
+                            distanceKm = if (state.isCardioCategory) distanceKm else null,
                             note = state.note.trim(),
                         )
                     )
@@ -117,6 +127,7 @@ class WorkoutViewModel(
                             typeId = state.selectedTypeId,
                             durationMinutes = duration,
                             caloriesBurned = calories,
+                            distanceKm = if (state.isCardioCategory) distanceKm else null,
                             note = state.note.trim(),
                         )
                     )
@@ -179,6 +190,7 @@ class WorkoutViewModel(
                 availableTypes = types,
                 durationMinutes = workout.durationMinutes.toString(),
                 caloriesBurned = workout.caloriesBurned.toString(),
+                distanceKm = workout.distanceKm?.toString().orEmpty(),
                 note = workout.note,
             )
         }
@@ -209,8 +221,12 @@ data class WorkoutUiState(
     val selectedTypeId: Long? = null,
     val durationMinutes: String = "",
     val caloriesBurned: String = "",
+    val distanceKm: String = "",
     val note: String = "",
-)
+) {
+    val isCardioCategory: Boolean
+        get() = categories.firstOrNull { it.id == selectedCategoryId }?.name == "Кардио"
+}
 
 sealed interface WorkoutEvent {
     data object Saved : WorkoutEvent

@@ -6,6 +6,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.simplediary.app.SimpleDiaryApplication
+import com.example.simplediary.core.settings.DEFAULT_NOTE_CATEGORIES
+import com.example.simplediary.core.settings.loadNoteCategories
 import com.example.simplediary.data.local.entity.StateNoteEntity
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +28,7 @@ class StateNoteViewModel(
     private val app = application as SimpleDiaryApplication
     private val stateNoteDao = app.appDatabase.stateNoteDao()
     private val photoCompressor = app.photoCompressor
+    private val preferences = application.getSharedPreferences(NOTE_CATEGORIES_PREFS, Application.MODE_PRIVATE)
 
     private val _uiState = MutableStateFlow(
         StateNoteUiState(
@@ -39,8 +42,11 @@ class StateNoteViewModel(
     val events: SharedFlow<StateNoteEvent> = _events.asSharedFlow()
 
     init {
-        if (stateNoteId != null) {
-            viewModelScope.launch { loadStateNote(stateNoteId) }
+        viewModelScope.launch {
+            loadCategorySuggestions()
+            if (stateNoteId != null) {
+                loadStateNote(stateNoteId)
+            }
         }
     }
 
@@ -50,6 +56,10 @@ class StateNoteViewModel(
 
     fun onTextChanged(text: String) {
         _uiState.update { it.copy(text = text) }
+    }
+
+    fun onCategoryChanged(category: String) {
+        _uiState.update { it.copy(category = category) }
     }
 
     fun onPhotoRemoved() {
@@ -75,12 +85,14 @@ class StateNoteViewModel(
                 _events.emit(StateNoteEvent.Error("Text note is required"))
                 return@launch
             }
+            val category = state.category.trim().ifBlank { DEFAULT_NOTE_CATEGORY }
 
             _uiState.update { it.copy(isBusy = true) }
             runCatching {
                 if (stateNoteId == null) {
                     stateNoteDao.insertStateNote(
                         StateNoteEntity(
+                            category = category,
                             text = text,
                             photoPath = state.photoPath,
                             timestampEpochMillis = state.timestampEpochMillis,
@@ -90,6 +102,7 @@ class StateNoteViewModel(
                     stateNoteDao.updateStateNote(
                         StateNoteEntity(
                             id = stateNoteId,
+                            category = category,
                             text = text,
                             photoPath = state.photoPath,
                             timestampEpochMillis = state.timestampEpochMillis,
@@ -122,14 +135,31 @@ class StateNoteViewModel(
         runCatching {
             val note = stateNoteDao.getStateNoteById(stateNoteId) ?: return
             _uiState.update {
+                val available = if (it.availableCategories.contains(note.category)) {
+                    it.availableCategories
+                } else {
+                    it.availableCategories + note.category
+                }
                 it.copy(
                     timestampEpochMillis = note.timestampEpochMillis,
+                    category = note.category,
+                    availableCategories = available,
                     text = note.text,
                     photoPath = note.photoPath,
                 )
             }
         }.onFailure { throwable ->
             _events.emit(StateNoteEvent.Error(throwable.message ?: "Failed to load state note"))
+        }
+    }
+
+    private suspend fun loadCategorySuggestions() {
+        val merged = preferences.loadNoteCategories()
+        _uiState.update { state ->
+            state.copy(
+                availableCategories = merged,
+                category = state.category.ifBlank { DEFAULT_NOTE_CATEGORY },
+            )
         }
     }
 
@@ -165,6 +195,9 @@ class StateNoteViewModel(
     }
 
     companion object {
+        private const val NOTE_CATEGORIES_PREFS = "note_categories_preferences"
+        private const val DEFAULT_NOTE_CATEGORY = "🙂"
+
         fun factory(application: Application, stateNoteId: Long?): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -183,6 +216,8 @@ data class StateNoteUiState(
     val isEditMode: Boolean,
     val isBusy: Boolean = false,
     val timestampEpochMillis: Long,
+    val category: String = "🙂",
+    val availableCategories: List<String> = DEFAULT_NOTE_CATEGORIES,
     val text: String = "",
     val photoPath: String? = null,
 )

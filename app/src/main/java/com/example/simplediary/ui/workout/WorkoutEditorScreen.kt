@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,7 @@ fun WorkoutEditorScreen(
     onTypeSelected: (Long?) -> Unit,
     onDurationChanged: (String) -> Unit,
     onCaloriesChanged: (String) -> Unit,
+    onDistanceChanged: (String) -> Unit,
     onNoteChanged: (String) -> Unit,
     onSaveClick: () -> Unit,
     onDeleteClick: () -> Unit,
@@ -137,6 +139,19 @@ fun WorkoutEditorScreen(
                 )
             }
 
+            if (uiState.isCardioCategory) {
+                item {
+                    OutlinedTextField(
+                        value = uiState.distanceKm,
+                        onValueChange = onDistanceChanged,
+                        label = { Text("Distance (km)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    )
+                }
+            }
+
             item {
                 OutlinedTextField(
                     value = uiState.note,
@@ -145,6 +160,7 @@ fun WorkoutEditorScreen(
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     maxLines = 6,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 )
             }
 

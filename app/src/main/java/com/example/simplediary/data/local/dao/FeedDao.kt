@@ -76,6 +76,10 @@ interface FeedDao {
                  'Type: ' || COALESCE(wt.name, '-') || CHAR(10) ||
                  'Duration: ' || w.durationMinutes || ' min' || CHAR(10) ||
                  'Calories burned: ' || CAST(ROUND(COALESCE(w.caloriesBurned, 0.0), 0) AS INTEGER) || CHAR(10) ||
+                 CASE
+                     WHEN w.distanceKm IS NULL THEN ''
+                     ELSE ('Distance: ' || REPLACE(printf('%.1f', w.distanceKm), ',', '.') || ' km' || CHAR(10))
+                 END ||
                  'Note: ' || COALESCE(NULLIF(TRIM(w.note), ''), '-')) AS expandedDetails,
                 NULL AS photoPath
             FROM workouts w
@@ -88,7 +92,7 @@ interface FeedDao {
                 s.id AS entryId,
                 'STATE_NOTE' AS entryType,
                 s.timestampEpochMillis AS timestampEpochMillis,
-                s.text AS title,
+                COALESCE(NULLIF(TRIM(s.category), ''), '🙂') AS title,
                 NULL AS subtitle,
                 s.text AS expandedDetails,
                 s.photoPath AS photoPath

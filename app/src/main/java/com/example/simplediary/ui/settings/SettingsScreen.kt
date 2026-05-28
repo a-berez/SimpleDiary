@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,6 +52,9 @@ fun SettingsScreen(
     onAddType: (Long, String) -> Unit,
     onRenameType: (Long, String) -> Unit,
     onDeleteType: (Long) -> Unit,
+    onAddNoteCategory: (String) -> Unit,
+    onRenameNoteCategory: (String, String) -> Unit,
+    onDeleteNoteCategory: (String) -> Unit,
     onExportCsv: (Uri) -> Unit,
     onBackupZip: (Uri) -> Unit,
     onRestoreZip: (Uri) -> Unit,
@@ -298,7 +302,63 @@ fun SettingsScreen(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(text = "3. Data management", fontWeight = FontWeight.Medium)
+                    Text(text = "3. State note categories", fontWeight = FontWeight.Medium)
+                    OutlinedButton(
+                        onClick = {
+                            nameDialogState = NameDialogState(
+                                title = "Add state note category",
+                                initialValue = "",
+                                onConfirm = onAddNoteCategory,
+                            )
+                        }
+                    ) {
+                        Text("Add category", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+
+                    uiState.noteCategories.forEach { category ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                text = category,
+                                modifier = Modifier.weight(1f),
+                                fontWeight = FontWeight.Medium,
+                            )
+                            TextButton(
+                                onClick = {
+                                    nameDialogState = NameDialogState(
+                                        title = "Rename state note category",
+                                        initialValue = category,
+                                        onConfirm = { newName -> onRenameNoteCategory(category, newName) },
+                                    )
+                                }
+                            ) { Text("Rename", maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            TextButton(
+                                onClick = {
+                                    confirmDialogState = ConfirmDialogState(
+                                        title = "Delete state note category",
+                                        message = "Delete category '$category'?",
+                                        onConfirm = { onDeleteNoteCategory(category) },
+                                    )
+                                }
+                            ) { Text("Delete", maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow),
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(text = "4. Data management", fontWeight = FontWeight.Medium)
                     Button(
                         onClick = { exportCsvLauncher.launch("simple_diary_export.csv.zip") },
                         modifier = Modifier.fillMaxWidth(),
@@ -369,6 +429,7 @@ private fun NameInputDialog(
                 onValueChange = { value = it },
                 singleLine = true,
                 label = { Text("Name") },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )
         },
         confirmButton = {
