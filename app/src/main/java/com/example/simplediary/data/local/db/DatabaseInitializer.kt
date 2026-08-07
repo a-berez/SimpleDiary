@@ -70,9 +70,64 @@ object DatabaseInitializer {
         }
     }
 
+    val migration7To8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            createFoodItemsTable(db)
+        }
+    }
+
     fun onCreate(db: SupportSQLiteDatabase) {
         createWorkoutMetadataTables(db)
         seedDefaultWorkoutMetadata(db)
+        createFoodItemsTable(db)
+    }
+
+    private fun createFoodItemsTable(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS food_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                name TEXT NOT NULL,
+                normalizedName TEXT NOT NULL,
+                caloriesKcal REAL,
+                proteinsGrams REAL,
+                fatsGrams REAL,
+                carbsGrams REAL,
+                weightGrams REAL,
+                source TEXT NOT NULL,
+                sourceKey TEXT,
+                ingredients TEXT,
+                useCount INTEGER NOT NULL,
+                lastUsedAt INTEGER,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_food_items_normalizedName
+            ON food_items(normalizedName)
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS index_food_items_source_sourceKey
+            ON food_items(source, sourceKey)
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_food_items_lastUsedAt
+            ON food_items(lastUsedAt)
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_food_items_useCount
+            ON food_items(useCount)
+            """.trimIndent()
+        )
     }
 
     private fun createWorkoutMetadataTables(db: SupportSQLiteDatabase) {

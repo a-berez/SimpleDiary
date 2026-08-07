@@ -55,7 +55,9 @@ fun SettingsScreen(
     onAddNoteCategory: (String) -> Unit,
     onRenameNoteCategory: (String, String) -> Unit,
     onDeleteNoteCategory: (String) -> Unit,
+    onOpenFoodLibrary: () -> Unit,
     onExportCsv: (Uri) -> Unit,
+    onImportGrowFoodCsv: (Uri) -> Unit,
     onBackupZip: (Uri) -> Unit,
     onRestoreZip: (Uri) -> Unit,
     events: SharedFlow<SettingsEvent>,
@@ -68,6 +70,9 @@ fun SettingsScreen(
 
     val exportCsvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let(onExportCsv)
+    }
+    val importGrowFoodCsvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(onImportGrowFoodCsv)
     }
     val backupZipLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let(onBackupZip)
@@ -358,7 +363,43 @@ fun SettingsScreen(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(text = "4. Data management", fontWeight = FontWeight.Medium)
+                    Text(text = "4. Food library", fontWeight = FontWeight.Medium)
+                    Button(
+                        onClick = onOpenFoodLibrary,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Manage food library", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            importGrowFoodCsvLauncher.launch(
+                                arrayOf(
+                                    "text/*",
+                                    "text/csv",
+                                    "application/csv",
+                                    "application/vnd.ms-excel",
+                                    "application/octet-stream",
+                                )
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Import Grow Food CSV", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow),
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(text = "5. Data management", fontWeight = FontWeight.Medium)
                     Button(
                         onClick = { exportCsvLauncher.launch("simple_diary_export.csv.zip") },
                         modifier = Modifier.fillMaxWidth(),

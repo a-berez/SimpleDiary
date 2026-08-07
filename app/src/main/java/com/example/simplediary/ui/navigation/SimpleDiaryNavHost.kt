@@ -14,6 +14,8 @@ import androidx.navigation.compose.composable
 import com.example.simplediary.app.SimpleDiaryApplication
 import com.example.simplediary.ui.feed.FeedScreen
 import com.example.simplediary.ui.feed.FeedViewModel
+import com.example.simplediary.ui.food_library.FoodLibraryScreen
+import com.example.simplediary.ui.food_library.FoodLibraryViewModel
 import com.example.simplediary.ui.meal.MealEditorScreen
 import com.example.simplediary.ui.meal.MealViewModel
 import com.example.simplediary.ui.settings.SettingsScreen
@@ -87,6 +89,8 @@ fun SimpleDiaryNavHost(
                 onRowChanged = mealViewModel::onNutritionRowChanged,
                 onDeleteRow = mealViewModel::onDeleteNutritionRow,
                 onAddRow = mealViewModel::onAddNutritionRow,
+                onFoodSearchQueryChanged = mealViewModel::onFoodSearchQueryChanged,
+                onFoodItemSelected = mealViewModel::onFoodItemSelected,
                 onSaveClick = mealViewModel::onSaveClick,
                 onDeleteClick = mealViewModel::onDeleteClick,
                 onPhotoPicked = mealViewModel::onPhotoPicked,
@@ -211,10 +215,29 @@ fun SimpleDiaryNavHost(
                 onAddNoteCategory = settingsViewModel::addNoteCategory,
                 onRenameNoteCategory = settingsViewModel::renameNoteCategory,
                 onDeleteNoteCategory = settingsViewModel::deleteNoteCategory,
+                onOpenFoodLibrary = { navController.navigate(SimpleDiaryDestination.FoodLibrary.route) },
                 onExportCsv = settingsViewModel::exportCsv,
+                onImportGrowFoodCsv = settingsViewModel::importGrowFoodCsv,
                 onBackupZip = settingsViewModel::backupZip,
                 onRestoreZip = settingsViewModel::restoreZip,
                 events = settingsViewModel.events,
+            )
+        }
+        composable(SimpleDiaryDestination.FoodLibrary.route) {
+            val app = LocalContext.current.applicationContext as SimpleDiaryApplication
+            val foodLibraryViewModel: FoodLibraryViewModel = viewModel(
+                key = "food_library",
+                factory = FoodLibraryViewModel.factory(app),
+            )
+            val uiState by foodLibraryViewModel.uiState.collectAsState()
+            FoodLibraryScreen(
+                contentPadding = contentPadding,
+                uiState = uiState,
+                onSearchQueryChanged = foodLibraryViewModel::onSearchQueryChanged,
+                onUpdateFoodItem = foodLibraryViewModel::updateFoodItem,
+                onDeleteFoodItem = foodLibraryViewModel::deleteFoodItem,
+                events = foodLibraryViewModel.events,
+                onNavigateBack = { navController.popBackStack() },
             )
         }
     }

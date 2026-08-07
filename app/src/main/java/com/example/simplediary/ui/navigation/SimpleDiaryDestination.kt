@@ -34,6 +34,7 @@ sealed class SimpleDiaryDestination(
     }
     data object DailySummary : SimpleDiaryDestination("daily_summary", "Daily Summary")
     data object Settings : SimpleDiaryDestination("settings", "Settings")
+    data object FoodLibrary : SimpleDiaryDestination("food_library", "Food Library")
 }
 
 data class BottomNavDestination(

@@ -69,6 +69,7 @@ class SimpleDiaryApplication : Application() {
                 DatabaseInitializer.migration4To5,
                 DatabaseInitializer.migration5To6,
                 DatabaseInitializer.migration6To7,
+                DatabaseInitializer.migration7To8,
             )
             .addCallback(
                 object : RoomDatabase.Callback() {

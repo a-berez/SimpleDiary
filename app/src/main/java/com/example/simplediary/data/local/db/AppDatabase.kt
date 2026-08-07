@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.example.simplediary.data.local.dao.DailyTargetDao
 import com.example.simplediary.data.local.dao.FeedDao
+import com.example.simplediary.data.local.dao.FoodItemDao
 import com.example.simplediary.data.local.dao.MealDao
 import com.example.simplediary.data.local.dao.NutritionRowDao
 import com.example.simplediary.data.local.dao.StateNoteDao
@@ -11,6 +12,7 @@ import com.example.simplediary.data.local.dao.WorkoutCategoryDao
 import com.example.simplediary.data.local.dao.WorkoutDao
 import com.example.simplediary.data.local.dao.WorkoutTypeDao
 import com.example.simplediary.data.local.entity.DailyTargetEntity
+import com.example.simplediary.data.local.entity.FoodItemEntity
 import com.example.simplediary.data.local.entity.MealEntity
 import com.example.simplediary.data.local.entity.NutritionRowEntity
 import com.example.simplediary.data.local.entity.StateNoteEntity
@@ -27,8 +29,9 @@ import com.example.simplediary.data.local.entity.WorkoutTypeEntity
         WorkoutTypeEntity::class,
         StateNoteEntity::class,
         DailyTargetEntity::class,
+        FoodItemEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -40,4 +43,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun stateNoteDao(): StateNoteDao
     abstract fun dailyTargetDao(): DailyTargetDao
     abstract fun feedDao(): FeedDao
+    abstract fun foodItemDao(): FoodItemDao
 }

@@ -27,13 +27,16 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -67,6 +70,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.UUID
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MealEditorScreen(
     contentPadding: PaddingValues,
@@ -76,6 +80,8 @@ fun MealEditorScreen(
     onRowChanged: (NutritionRowInput) -> Unit,
     onDeleteRow: (String) -> Unit,
     onAddRow: () -> Unit,
+    onFoodSearchQueryChanged: (String) -> Unit,
+    onFoodItemSelected: (Long, Double) -> Unit,
     onSaveClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onPhotoPicked: (Uri) -> Unit,
@@ -87,6 +93,7 @@ fun MealEditorScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
     var pendingCropOutputUri by remember { mutableStateOf<Uri?>(null) }
+    var isFoodLibraryVisible by remember { mutableStateOf(false) }
 
     val cropLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
@@ -199,10 +206,23 @@ fun MealEditorScreen(
             }
 
             item {
-                OutlinedButton(onClick = onAddRow) {
-                    Icon(imageVector = Icons.Outlined.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text("Add row", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { isFoodLibraryVisible = true },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(imageVector = Icons.Outlined.Search, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("From library", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    OutlinedButton(
+                        onClick = onAddRow,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(imageVector = Icons.Outlined.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("Manual row", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
 
@@ -249,6 +269,148 @@ fun MealEditorScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator()
+            }
+        }
+
+        if (isFoodLibraryVisible) {
+            ModalBottomSheet(
+                onDismissRequest = { isFoodLibraryVisible = false },
+            ) {
+                FoodLibrarySheet(
+                    query = uiState.foodSearchQuery,
+                    items = uiState.foodItems,
+                    onQueryChanged = onFoodSearchQueryChanged,
+                    onFoodItemSelected = { foodItemId, portionMultiplier ->
+                        onFoodItemSelected(foodItemId, portionMultiplier)
+                        isFoodLibraryVisible = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FoodLibrarySheet(
+    query: String,
+    items: List<FoodItemUiModel>,
+    onQueryChanged: (String) -> Unit,
+    onFoodItemSelected: (Long, Double) -> Unit,
+) {
+    var portionText by remember { mutableStateOf("1") }
+    val portionMultiplier = portionText.parsePortionMultiplier()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = "Food library",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Medium,
+        )
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Search") },
+            singleLine = true,
+            leadingIcon = { Icon(imageVector = Icons.Outlined.Search, contentDescription = null) },
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = portionText,
+                onValueChange = { portionText = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Portion") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                isError = portionMultiplier == null,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("0.5", "1", "1.5").forEach { value ->
+                    OutlinedButton(
+                        onClick = { portionText = value },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("${value}x", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+
+        if (items.isEmpty()) {
+            Text(
+                text = "No saved food items yet.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(
+                    items = items,
+                    key = { it.id },
+                ) { item ->
+                    FoodLibraryItemRow(
+                        item = item,
+                        portionMultiplier = portionMultiplier ?: 1.0,
+                        isAddEnabled = portionMultiplier != null,
+                        onClick = { onFoodItemSelected(item.id, portionMultiplier ?: 1.0) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FoodLibraryItemRow(
+    item: FoodItemUiModel,
+    portionMultiplier: Double,
+    isAddEnabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = item.macroSummary(portionMultiplier),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                OutlinedButton(
+                    onClick = onClick,
+                    enabled = isAddEnabled,
+                ) {
+                    Text("Add", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
         }
     }
@@ -398,7 +560,7 @@ private fun NutritionRowEditor(
 
             OutlinedTextField(
                 value = row.itemName,
-                onValueChange = { onRowChanged(row.copy(itemName = it)) },
+                onValueChange = { onRowChanged(row.copy(sourceFoodItemId = null, itemName = it)) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Name / description") },
                 singleLine = true,
@@ -408,7 +570,7 @@ private fun NutritionRowEditor(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = row.calories,
-                    onValueChange = { onRowChanged(row.copy(calories = it)) },
+                    onValueChange = { onRowChanged(row.copy(sourceFoodItemId = null, calories = it)) },
                     modifier = Modifier.weight(1f),
                     label = { Text("Calories") },
                     singleLine = true,
@@ -416,7 +578,7 @@ private fun NutritionRowEditor(
                 )
                 OutlinedTextField(
                     value = row.proteins,
-                    onValueChange = { onRowChanged(row.copy(proteins = it)) },
+                    onValueChange = { onRowChanged(row.copy(sourceFoodItemId = null, proteins = it)) },
                     modifier = Modifier.weight(1f),
                     label = { Text("Proteins") },
                     singleLine = true,
@@ -427,7 +589,7 @@ private fun NutritionRowEditor(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = row.fats,
-                    onValueChange = { onRowChanged(row.copy(fats = it)) },
+                    onValueChange = { onRowChanged(row.copy(sourceFoodItemId = null, fats = it)) },
                     modifier = Modifier.weight(1f),
                     label = { Text("Fats") },
                     singleLine = true,
@@ -435,7 +597,7 @@ private fun NutritionRowEditor(
                 )
                 OutlinedTextField(
                     value = row.carbs,
-                    onValueChange = { onRowChanged(row.copy(carbs = it)) },
+                    onValueChange = { onRowChanged(row.copy(sourceFoodItemId = null, carbs = it)) },
                     modifier = Modifier.weight(1f),
                     label = { Text("Carbs") },
                     singleLine = true,
@@ -541,3 +703,18 @@ private fun formatDateTime(epochMillis: Long): String {
 }
 
 private fun Double.format1(): String = String.format(java.util.Locale.US, "%.1f", this)
+
+private fun FoodItemUiModel.macroSummary(portionMultiplier: Double): String {
+    return "K: ${caloriesKcal.formatMacro(portionMultiplier)}  P: ${proteinsGrams.formatMacro(portionMultiplier)}  F: ${fatsGrams.formatMacro(portionMultiplier)}  C: ${carbsGrams.formatMacro(portionMultiplier)}"
+}
+
+private fun Double?.formatMacro(portionMultiplier: Double): String {
+    return this?.let { (it * portionMultiplier).format1() } ?: "-"
+}
+
+private fun String.parsePortionMultiplier(): Double? {
+    return trim()
+        .replace(',', '.')
+        .toDoubleOrNull()
+        ?.takeIf { it.isFinite() && it > 0.0 }
+}

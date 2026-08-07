@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.example.simplediary.app.SimpleDiaryApplication
+import com.example.simplediary.data.local.entity.FoodItemEntity
+import com.example.simplediary.data.local.entity.FoodItemSource
 import com.example.simplediary.data.local.entity.MealEntity
 import com.example.simplediary.data.local.entity.NutritionRowEntity
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -15,10 +17,12 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
+import java.util.Locale
 import java.util.UUID
 
 class MealViewModel(
@@ -29,6 +33,7 @@ class MealViewModel(
     private val app = application as SimpleDiaryApplication
     private val mealDao = app.appDatabase.mealDao()
     private val nutritionRowDao = app.appDatabase.nutritionRowDao()
+    private val foodItemDao = app.appDatabase.foodItemDao()
     private val photoCompressor = app.photoCompressor
 
     private val _uiState = MutableStateFlow(
@@ -42,12 +47,41 @@ class MealViewModel(
 
     private val _events = MutableSharedFlow<MealEvent>()
     val events: SharedFlow<MealEvent> = _events.asSharedFlow()
+    private var allFoodItems: List<FoodItemUiModel> = emptyList()
 
     init {
+        viewModelScope.launch {
+            foodItemDao.observeAllFoodItems().collectLatest { foodItems ->
+                allFoodItems = foodItems.map { it.toUiModel() }
+                updateVisibleFoodItems()
+            }
+        }
         if (mealId != null) {
             viewModelScope.launch {
                 loadMeal(mealId)
             }
+        }
+    }
+
+    fun onFoodSearchQueryChanged(query: String) {
+        _uiState.update { it.copy(foodSearchQuery = query) }
+        updateVisibleFoodItems()
+    }
+
+    fun onFoodItemSelected(foodItemId: Long, portionMultiplier: Double = 1.0) {
+        val foodItem = allFoodItems.firstOrNull { it.id == foodItemId } ?: return
+        val multiplier = portionMultiplier.takeIf { it.isFinite() && it > 0.0 } ?: 1.0
+        _uiState.update { state ->
+            state.copy(
+                nutritionRows = state.nutritionRows + NutritionRowInput(
+                    sourceFoodItemId = foodItem.id,
+                    itemName = foodItem.name,
+                    calories = foodItem.caloriesKcal.scaledBy(multiplier).orEmpty(),
+                    proteins = foodItem.proteinsGrams.scaledBy(multiplier).orEmpty(),
+                    fats = foodItem.fatsGrams.scaledBy(multiplier).orEmpty(),
+                    carbs = foodItem.carbsGrams.scaledBy(multiplier).orEmpty(),
+                )
+            )
         }
     }
 
@@ -98,9 +132,10 @@ class MealViewModel(
     }
 
     fun onSaveClick() {
+        val currentState = _uiState.value
+        if (currentState.isBusy) return
+        _uiState.update { it.copy(isBusy = true) }
         viewModelScope.launch {
-            val currentState = _uiState.value
-            _uiState.update { it.copy(isBusy = true) }
             runCatching {
                 saveMeal(currentState)
             }.onSuccess {
@@ -159,7 +194,14 @@ class MealViewModel(
 
     private suspend fun saveMeal(state: MealUiState) {
         val nutritionRows = state.nutritionRows
-            .map { it.toEntityOrNull() }
+            .map { input ->
+                input.toEntityOrNull()?.let { entity ->
+                    NutritionRowToSave(
+                        sourceFoodItemId = input.sourceFoodItemId,
+                        entity = entity,
+                    )
+                }
+            }
             .filterNotNull()
 
         app.appDatabase.withTransaction {
@@ -186,12 +228,89 @@ class MealViewModel(
 
             if (nutritionRows.isNotEmpty()) {
                 nutritionRowDao.insertNutritionRows(
-                    nutritionRows.map { row ->
-                        row.copy(mealId = targetMealId)
+                    nutritionRows.map { rowToSave ->
+                        rowToSave.entity.copy(mealId = targetMealId)
                     }
+                )
+                saveNutritionRowsToFoodLibrary(
+                    rows = nutritionRows,
+                    usedAt = state.timestampEpochMillis,
                 )
             }
         }
+    }
+
+    private suspend fun saveNutritionRowsToFoodLibrary(
+        rows: List<NutritionRowToSave>,
+        usedAt: Long,
+    ) {
+        rows.forEach { rowToSave ->
+            val sourceFoodItemId = rowToSave.sourceFoodItemId
+            if (sourceFoodItemId != null) {
+                foodItemDao.markFoodItemUsed(sourceFoodItemId, usedAt)
+                return@forEach
+            }
+
+            val row = rowToSave.entity
+            val name = row.itemName.trim()
+            if (name.isBlank() || name == DEFAULT_ITEM_NAME) return@forEach
+
+            val normalizedName = name.normalizedFoodName()
+            val existing = foodItemDao.findMatchingFoodItem(
+                normalizedName = normalizedName,
+                source = FoodItemSource.MANUAL,
+                caloriesKcal = row.caloriesKcal,
+                proteinsGrams = row.proteinsGrams,
+                fatsGrams = row.fatsGrams,
+                carbsGrams = row.carbsGrams,
+            )
+            if (existing != null) {
+                foodItemDao.markFoodItemUsed(existing.id, usedAt)
+            } else {
+                val now = System.currentTimeMillis()
+                foodItemDao.insertFoodItem(
+                    FoodItemEntity(
+                        name = name,
+                        normalizedName = normalizedName,
+                        caloriesKcal = row.caloriesKcal,
+                        proteinsGrams = row.proteinsGrams,
+                        fatsGrams = row.fatsGrams,
+                        carbsGrams = row.carbsGrams,
+                        weightGrams = null,
+                        source = FoodItemSource.MANUAL,
+                        sourceKey = null,
+                        ingredients = null,
+                        useCount = 1,
+                        lastUsedAt = usedAt,
+                        createdAt = now,
+                        updatedAt = now,
+                    )
+                )
+            }
+        }
+    }
+
+    private fun updateVisibleFoodItems() {
+        val query = _uiState.value.foodSearchQuery.normalizedFoodName()
+        val visible = allFoodItems
+            .asSequence()
+            .filter { item -> query.isBlank() || item.normalizedName.contains(query) }
+            .take(MAX_VISIBLE_FOOD_ITEMS)
+            .toList()
+        _uiState.update { it.copy(foodItems = visible) }
+    }
+
+    private fun FoodItemEntity.toUiModel(): FoodItemUiModel {
+        return FoodItemUiModel(
+            id = id,
+            name = name,
+            normalizedName = normalizedName,
+            caloriesKcal = caloriesKcal,
+            proteinsGrams = proteinsGrams,
+            fatsGrams = fatsGrams,
+            carbsGrams = carbsGrams,
+            source = source,
+        )
     }
 
     private suspend fun compressPickedPhoto(sourceUri: Uri): String {
@@ -237,7 +356,7 @@ class MealViewModel(
         if (!hasAnyValue) return null
         return NutritionRowEntity(
             mealId = 0L,
-            itemName = name.ifBlank { "Item" },
+            itemName = name.ifBlank { DEFAULT_ITEM_NAME },
             caloriesKcal = caloriesValue,
             proteinsGrams = proteinsValue,
             fatsGrams = fatsValue,
@@ -267,15 +386,34 @@ data class MealUiState(
     val photoPath: String? = null,
     val note: String = "",
     val nutritionRows: List<NutritionRowInput>,
+    val foodSearchQuery: String = "",
+    val foodItems: List<FoodItemUiModel> = emptyList(),
 )
 
 data class NutritionRowInput(
     val localId: String = UUID.randomUUID().toString(),
+    val sourceFoodItemId: Long? = null,
     val itemName: String = "",
     val calories: String = "",
     val proteins: String = "",
     val fats: String = "",
     val carbs: String = "",
+)
+
+data class FoodItemUiModel(
+    val id: Long,
+    val name: String,
+    val normalizedName: String,
+    val caloriesKcal: Double?,
+    val proteinsGrams: Double?,
+    val fatsGrams: Double?,
+    val carbsGrams: Double?,
+    val source: String,
+)
+
+private data class NutritionRowToSave(
+    val sourceFoodItemId: Long?,
+    val entity: NutritionRowEntity,
 )
 
 sealed interface MealEvent {
@@ -286,7 +424,20 @@ sealed interface MealEvent {
 
 private fun String.parseOptionalDouble(): Double? = trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()
 
+private fun String.normalizedFoodName(): String {
+    return trim()
+        .lowercase(Locale.getDefault())
+        .replace(Regex("\\s+"), " ")
+}
+
 private fun Double.toCleanString(): String {
     val longValue = toLong()
     return if (this == longValue.toDouble()) longValue.toString() else toString()
 }
+
+private fun Double?.scaledBy(multiplier: Double): String? {
+    return this?.let { (it * multiplier).toCleanString() }
+}
+
+private const val DEFAULT_ITEM_NAME = "Item"
+private const val MAX_VISIBLE_FOOD_ITEMS = 50

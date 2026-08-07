@@ -9,6 +9,7 @@ import com.example.simplediary.app.SimpleDiaryApplication
 import com.example.simplediary.core.settings.DEFAULT_NOTE_CATEGORIES
 import com.example.simplediary.core.settings.loadNoteCategories
 import com.example.simplediary.core.settings.saveNoteCategories
+import com.example.simplediary.data.files.GrowFoodCsvImporter
 import com.example.simplediary.data.local.entity.DailyTargetEntity
 import com.example.simplediary.data.local.entity.WorkoutCategoryEntity
 import com.example.simplediary.data.local.entity.WorkoutTypeEntity
@@ -31,6 +32,10 @@ class SettingsViewModel(
     private val dailyTargetDao = app.appDatabase.dailyTargetDao()
     private val workoutCategoryDao = app.appDatabase.workoutCategoryDao()
     private val workoutTypeDao = app.appDatabase.workoutTypeDao()
+    private val growFoodCsvImporter = GrowFoodCsvImporter(
+        context = application.applicationContext,
+        foodItemDao = app.appDatabase.foodItemDao(),
+    )
     private val preferences = application.getSharedPreferences(NOTE_CATEGORIES_PREFS, Application.MODE_PRIVATE)
 
     private val zoneId = ZoneId.systemDefault()
@@ -243,6 +248,22 @@ class SettingsViewModel(
                 .onSuccess { _events.emit(SettingsEvent.Message("Restore completed")) }
                 .onFailure { throwable ->
                     _events.emit(SettingsEvent.Message(throwable.message ?: "Restore failed"))
+                }
+        }
+    }
+
+    fun importGrowFoodCsv(sourceUri: Uri) {
+        viewModelScope.launch {
+            runCatching { growFoodCsvImporter.importFoodItems(sourceUri) }
+                .onSuccess { result ->
+                    _events.emit(
+                        SettingsEvent.Message(
+                            "Grow Food import: ${result.inserted} added, ${result.updated} updated, ${result.skipped} skipped"
+                        )
+                    )
+                }
+                .onFailure { throwable ->
+                    _events.emit(SettingsEvent.Message(throwable.message ?: "Grow Food import failed"))
                 }
         }
     }
