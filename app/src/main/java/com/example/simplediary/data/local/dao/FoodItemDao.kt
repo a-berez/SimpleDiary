@@ -48,23 +48,34 @@ interface FoodItemDao {
         """
         SELECT * FROM food_items
         WHERE normalizedName = :normalizedName
-          AND source = :source
-          AND ((caloriesKcal IS NULL AND :caloriesKcal IS NULL) OR caloriesKcal = :caloriesKcal)
-          AND ((proteinsGrams IS NULL AND :proteinsGrams IS NULL) OR proteinsGrams = :proteinsGrams)
-          AND ((fatsGrams IS NULL AND :fatsGrams IS NULL) OR fatsGrams = :fatsGrams)
-          AND ((carbsGrams IS NULL AND :carbsGrams IS NULL) OR carbsGrams = :carbsGrams)
+          AND (
+            (caloriesKcal IS NULL AND :caloriesKcal IS NULL)
+            OR ROUND(caloriesKcal, 0) = ROUND(:caloriesKcal, 0)
+          )
+          AND (
+            (proteinsGrams IS NULL AND :proteinsGrams IS NULL)
+            OR ROUND(proteinsGrams, 1) = ROUND(:proteinsGrams, 1)
+          )
+          AND (
+            (fatsGrams IS NULL AND :fatsGrams IS NULL)
+            OR ROUND(fatsGrams, 1) = ROUND(:fatsGrams, 1)
+          )
+          AND (
+            (carbsGrams IS NULL AND :carbsGrams IS NULL)
+            OR ROUND(carbsGrams, 1) = ROUND(:carbsGrams, 1)
+          )
         ORDER BY useCount DESC, lastUsedAt DESC
         LIMIT 1
         """
     )
     suspend fun findMatchingFoodItem(
         normalizedName: String,
-        source: String,
         caloriesKcal: Double?,
         proteinsGrams: Double?,
         fatsGrams: Double?,
         carbsGrams: Double?,
     ): FoodItemEntity?
+
 
     @Query(
         """

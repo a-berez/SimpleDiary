@@ -9,6 +9,7 @@ import com.example.simplediary.app.SimpleDiaryApplication
 import com.example.simplediary.core.settings.DEFAULT_NOTE_CATEGORIES
 import com.example.simplediary.core.settings.loadNoteCategories
 import com.example.simplediary.core.settings.saveNoteCategories
+import com.example.simplediary.data.files.FoodLibraryWriter
 import com.example.simplediary.data.files.GrowFoodCsvImporter
 import com.example.simplediary.data.local.entity.DailyTargetEntity
 import com.example.simplediary.data.local.entity.WorkoutCategoryEntity
@@ -34,7 +35,7 @@ class SettingsViewModel(
     private val workoutTypeDao = app.appDatabase.workoutTypeDao()
     private val growFoodCsvImporter = GrowFoodCsvImporter(
         context = application.applicationContext,
-        foodItemDao = app.appDatabase.foodItemDao(),
+        foodLibraryWriter = FoodLibraryWriter(app.appDatabase.foodItemDao()),
     )
     private val preferences = application.getSharedPreferences(NOTE_CATEGORIES_PREFS, Application.MODE_PRIVATE)
 

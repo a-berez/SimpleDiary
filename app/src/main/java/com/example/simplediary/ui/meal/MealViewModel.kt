@@ -7,8 +7,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.example.simplediary.app.SimpleDiaryApplication
+import com.example.simplediary.data.files.FoodLibraryWriter
 import com.example.simplediary.data.local.entity.FoodItemEntity
-import com.example.simplediary.data.local.entity.FoodItemSource
 import com.example.simplediary.data.local.entity.MealEntity
 import com.example.simplediary.data.local.entity.NutritionRowEntity
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -34,6 +34,7 @@ class MealViewModel(
     private val mealDao = app.appDatabase.mealDao()
     private val nutritionRowDao = app.appDatabase.nutritionRowDao()
     private val foodItemDao = app.appDatabase.foodItemDao()
+    private val foodLibraryWriter = FoodLibraryWriter(foodItemDao)
     private val photoCompressor = app.photoCompressor
 
     private val _uiState = MutableStateFlow(
@@ -261,46 +262,19 @@ class MealViewModel(
         rows.forEach { rowToSave ->
             val sourceFoodItemId = rowToSave.sourceFoodItemId
             if (sourceFoodItemId != null) {
-                foodItemDao.markFoodItemUsed(sourceFoodItemId, usedAt)
+                foodLibraryWriter.markUsed(sourceFoodItemId, usedAt)
                 return@forEach
             }
 
             val row = rowToSave.entity
-            val name = row.itemName.trim()
-            if (name.isBlank() || name == DEFAULT_ITEM_NAME) return@forEach
-
-            val normalizedName = name.normalizedFoodName()
-            val existing = foodItemDao.findMatchingFoodItem(
-                normalizedName = normalizedName,
-                source = FoodItemSource.MANUAL,
+            foodLibraryWriter.upsertFromManualRow(
+                name = row.itemName,
                 caloriesKcal = row.caloriesKcal,
                 proteinsGrams = row.proteinsGrams,
                 fatsGrams = row.fatsGrams,
                 carbsGrams = row.carbsGrams,
+                usedAt = usedAt,
             )
-            if (existing != null) {
-                foodItemDao.markFoodItemUsed(existing.id, usedAt)
-            } else {
-                val now = System.currentTimeMillis()
-                foodItemDao.insertFoodItem(
-                    FoodItemEntity(
-                        name = name,
-                        normalizedName = normalizedName,
-                        caloriesKcal = row.caloriesKcal,
-                        proteinsGrams = row.proteinsGrams,
-                        fatsGrams = row.fatsGrams,
-                        carbsGrams = row.carbsGrams,
-                        weightGrams = null,
-                        source = FoodItemSource.MANUAL,
-                        sourceKey = null,
-                        ingredients = null,
-                        useCount = 1,
-                        lastUsedAt = usedAt,
-                        createdAt = now,
-                        updatedAt = now,
-                    )
-                )
-            }
         }
     }
 

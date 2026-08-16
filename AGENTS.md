@@ -18,8 +18,9 @@ Do not assume the delivery plan equals what the user ate. The user eats at varia
 
 - Database version 9 adds optional `hungerBefore` / `satietyAfter` (1–10) on `meals`. They are entered in the meal editor and shown on the collapsed feed card subtitle (`Голод: N · Насыщение: M`). Missing values stay null; old meals are unchanged.
 - Database version 8 adds `food_items`.
-- `FoodItemDao` supports basic listing/search, source-key lookup, exact manual match lookup, and usage marking.
-- Saving a meal now auto-adds named manual nutrition rows to `food_items` or increments usage for an exact manual match.
+- `FoodLibraryWriter` owns library upsert/dedup: content identity is normalized name + rounded K/P/F/C (kcal to integers, macros to 1 decimal), matching across sources so a manual row does not clone an identical Grow Food dish. Different macros keep separate rows.
+- Grow Food CSV import upserts by `sourceKey` (`pack_id`); re-import updates name/macros/ingredients in place and preserves `useCount` / `lastUsedAt` / `createdAt`. Diary `nutrition_rows` stay independent snapshots.
+- Named manual nutrition rows on meal save go through `FoodLibraryWriter.upsertFromManualRow` (insert or `useCount++`). Rows linked from the library only mark usage.
 - `MealViewModel.onSaveClick()` now guards against repeated save launches while busy. This is intended to address observed duplicate meal pairs.
 - `MealEditorScreen` has a "From library" bottom sheet. Selecting a library item copies its K/P/F/C into a regular editable nutrition row.
 - The library picker supports a portion multiplier with quick values `0.5x`, `1x`, and `1.5x`; macros are scaled before being copied into the meal row.
@@ -58,7 +59,7 @@ The app does not yet have direct Android-side Grow Food API sync. Current produc
 
 ## Implementation direction for food library
 
-Use a `food_items` table as the reusable library and keep `nutrition_rows` as immutable facts copied into meals. Suggested fields:
+Use a `food_items` table as the reusable library and keep `nutrition_rows` as immutable facts copied into meals. Identity for content dedup: normalized name + rounded calories/proteins/fats/carbs. Grow Food identity for import: `sourceKey`. Suggested fields:
 
 - name and normalizedName
 - calories/proteins/fats/carbs

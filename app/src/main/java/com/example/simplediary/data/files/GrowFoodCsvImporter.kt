@@ -2,16 +2,13 @@ package com.example.simplediary.data.files
 
 import android.content.Context
 import android.net.Uri
-import com.example.simplediary.data.local.dao.FoodItemDao
-import com.example.simplediary.data.local.entity.FoodItemEntity
-import com.example.simplediary.data.local.entity.FoodItemSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class GrowFoodCsvImporter(
     private val context: Context,
-    private val foodItemDao: FoodItemDao,
+    private val foodLibraryWriter: FoodLibraryWriter,
 ) {
     suspend fun importFoodItems(sourceUri: Uri): GrowFoodImportResult = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
@@ -39,44 +36,21 @@ class GrowFoodCsvImporter(
 
             val normalizedName = name.normalizedFoodName()
             val sourceKey = row.sourceKey(normalizedName)
-            val now = System.currentTimeMillis()
-            val existing = foodItemDao.getBySourceKey(
-                source = FoodItemSource.GROW_FOOD,
-                sourceKey = sourceKey,
-            )
-            val next = FoodItemEntity(
-                id = existing?.id ?: 0L,
-                name = name,
-                normalizedName = normalizedName,
-                caloriesKcal = row.firstValue("calories").parseOptionalDouble(),
-                proteinsGrams = row.firstValue("proteins").parseOptionalDouble(),
-                fatsGrams = row.firstValue("fats").parseOptionalDouble(),
-                carbsGrams = row.firstValue("carbs").parseOptionalDouble(),
-                weightGrams = row.firstValue("weight").parseOptionalDouble(),
-                source = FoodItemSource.GROW_FOOD,
-                sourceKey = sourceKey,
-                ingredients = row.firstValue("ingredients").trim().ifBlank { null },
-                useCount = existing?.useCount ?: 0,
-                lastUsedAt = existing?.lastUsedAt,
-                createdAt = existing?.createdAt ?: now,
-                updatedAt = now,
-            )
-
-            if (existing == null) {
-                val insertedId = foodItemDao.insertFoodItem(next)
-                if (insertedId > 0L) {
-                    inserted += 1
-                } else {
-                    foodItemDao.getBySourceKey(FoodItemSource.GROW_FOOD, sourceKey)?.let { duplicate ->
-                        foodItemDao.updateFoodItem(next.copy(id = duplicate.id))
-                        updated += 1
-                    } ?: run {
-                        skipped += 1
-                    }
-                }
-            } else {
-                foodItemDao.updateFoodItem(next)
-                updated += 1
+            when (
+                foodLibraryWriter.upsertFromGrowFood(
+                    name = name,
+                    sourceKey = sourceKey,
+                    caloriesKcal = row.firstValue("calories").parseOptionalDouble(),
+                    proteinsGrams = row.firstValue("proteins").parseOptionalDouble(),
+                    fatsGrams = row.firstValue("fats").parseOptionalDouble(),
+                    carbsGrams = row.firstValue("carbs").parseOptionalDouble(),
+                    weightGrams = row.firstValue("weight").parseOptionalDouble(),
+                    ingredients = row.firstValue("ingredients").trim().ifBlank { null },
+                )
+            ) {
+                FoodLibraryUpsertResult.Inserted -> inserted += 1
+                FoodLibraryUpsertResult.Updated -> updated += 1
+                FoodLibraryUpsertResult.Skipped -> skipped += 1
             }
         }
 
@@ -184,12 +158,6 @@ class GrowFoodCsvImporter(
             .takeIf { it.isNotEmpty() }
             ?.replace(',', '.')
             ?.toDoubleOrNull()
-    }
-
-    private fun String.normalizedFoodName(): String {
-        return trim()
-            .lowercase(Locale.getDefault())
-            .replace(Regex("\\s+"), " ")
     }
 }
 
