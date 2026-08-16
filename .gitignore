@@ -1,19 +1,22 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+.idea/
 .DS_Store
+desktop.ini
+Thumbs.db
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+
+# Release signing (local only)
 keystore.properties
 *.jks
 *.keystore
 /keystore
+
+# Personal diary backups / exports (never commit)
+simple_diary_backup/
+*.zip

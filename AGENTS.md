@@ -27,6 +27,7 @@ Do not assume the delivery plan equals what the user ate. The user eats at varia
 - `GrowFoodCsvImporter` has an internal CSV parser that handles quoted fields and embedded newlines. It intentionally avoids a new dependency.
 - `SettingsScreen` links to `FoodLibraryScreen`, where food items can be searched, edited, and deleted.
 - Editing or deleting library items does not change already saved diary `nutrition_rows`.
+- `gf_script` now preserves old dish rows. A normal timestamped `sync` also updates cumulative CSV files in `data/food_library/`; exporting into an existing `--out` directory merges `menu_packs.csv` by `pack_id` and `custom_config.csv` by order/date/meal/pack.
 
 The app does not yet have direct Android-side Grow Food API sync. Current production flow is: run `gf_script`, import `menu_packs.csv` or `custom_config.csv` from Android settings, then choose actual eaten items manually from the food library.
 
@@ -41,10 +42,11 @@ The app does not yet have direct Android-side Grow Food API sync. Current produc
 
 ## Data and privacy
 
-- `simple_diary_backup/` contains the user's real usage data. Avoid printing raw meal names, notes, addresses, tokens, order ids, photos, or personal records in final responses.
+- `simple_diary_backup/` and similar local backup/export artifacts contain the user's real usage data. They are gitignored (also `*.zip`, `desktop.ini`). Avoid printing raw meal names, notes, addresses, tokens, order ids, photos, or personal records in final responses.
 - Prefer aggregate counts, schemas, and redacted samples.
 - Never expose `GROWFOOD_CLIENT_TOKEN` or `.env` contents.
 - Release signing uses local ignored files: `keystore.properties` and `keystore/simplediary-release.jks`. Never commit or print their secret values. The current release certificate is `CN=aberez` with SHA-256 `5a40785f1f2783686165eea76b2bed731c7125edfecced92c1a997b0cd79ed7d`.
+- Android Studio `.idea/` is gitignored and should stay untracked; do not re-add IDE project files.
 
 ## Known issues and risks
 
