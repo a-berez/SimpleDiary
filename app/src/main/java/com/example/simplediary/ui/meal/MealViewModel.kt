@@ -9,6 +9,7 @@ import androidx.room.withTransaction
 import com.example.simplediary.app.SimpleDiaryApplication
 import com.example.simplediary.data.files.FoodLibraryWriter
 import com.example.simplediary.data.local.entity.FoodItemEntity
+import com.example.simplediary.data.local.entity.FoodItemSource
 import com.example.simplediary.data.local.entity.MealEntity
 import com.example.simplediary.data.local.entity.NutritionRowEntity
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -71,18 +72,27 @@ class MealViewModel(
 
     fun onFoodItemSelected(foodItemId: Long, portionMultiplier: Double = 1.0) {
         val foodItem = allFoodItems.firstOrNull { it.id == foodItemId } ?: return
-        val multiplier = portionMultiplier.takeIf { it.isFinite() && it > 0.0 } ?: 1.0
+        val multiplier = if (foodItem.source == FoodItemSource.GROW_FOOD) {
+            1.0
+        } else {
+            portionMultiplier.takeIf { it.isFinite() && it > 0.0 } ?: 1.0
+        }
+        val newRow = NutritionRowInput(
+            sourceFoodItemId = foodItem.id,
+            itemName = foodItem.name,
+            calories = foodItem.caloriesKcal.scaledBy(multiplier).orEmpty(),
+            proteins = foodItem.proteinsGrams.scaledBy(multiplier).orEmpty(),
+            fats = foodItem.fatsGrams.scaledBy(multiplier).orEmpty(),
+            carbs = foodItem.carbsGrams.scaledBy(multiplier).orEmpty(),
+        )
         _uiState.update { state ->
-            state.copy(
-                nutritionRows = state.nutritionRows + NutritionRowInput(
-                    sourceFoodItemId = foodItem.id,
-                    itemName = foodItem.name,
-                    calories = foodItem.caloriesKcal.scaledBy(multiplier).orEmpty(),
-                    proteins = foodItem.proteinsGrams.scaledBy(multiplier).orEmpty(),
-                    fats = foodItem.fatsGrams.scaledBy(multiplier).orEmpty(),
-                    carbs = foodItem.carbsGrams.scaledBy(multiplier).orEmpty(),
-                )
-            )
+            val blankIndex = state.nutritionRows.indexOfFirst { it.isBlank() }
+            val nutritionRows = if (blankIndex >= 0) {
+                state.nutritionRows.toMutableList().also { it[blankIndex] = newRow }
+            } else {
+                state.nutritionRows + newRow
+            }
+            state.copy(nutritionRows = nutritionRows)
         }
     }
 
@@ -388,7 +398,16 @@ data class NutritionRowInput(
     val proteins: String = "",
     val fats: String = "",
     val carbs: String = "",
-)
+) {
+    fun isBlank(): Boolean {
+        return sourceFoodItemId == null &&
+            itemName.trim().isEmpty() &&
+            calories.trim().isEmpty() &&
+            proteins.trim().isEmpty() &&
+            fats.trim().isEmpty() &&
+            carbs.trim().isEmpty()
+    }
+}
 
 data class FoodItemUiModel(
     val id: Long,

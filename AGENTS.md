@@ -22,8 +22,8 @@ Do not assume the delivery plan equals what the user ate. The user eats at varia
 - Grow Food CSV import upserts by `sourceKey` (`pack_id`); re-import updates name/macros/ingredients in place and preserves `useCount` / `lastUsedAt` / `createdAt`. Diary `nutrition_rows` stay independent snapshots.
 - Named manual nutrition rows on meal save go through `FoodLibraryWriter.upsertFromManualRow` (insert or `useCount++`). Rows linked from the library only mark usage.
 - `MealViewModel.onSaveClick()` now guards against repeated save launches while busy. This is intended to address observed duplicate meal pairs.
-- `MealEditorScreen` has a "From library" bottom sheet. Selecting a library item copies its K/P/F/C into a regular editable nutrition row.
-- The library picker supports a portion multiplier with quick values `0.5x`, `1x`, and `1.5x`; macros are scaled before being copied into the meal row.
+- `MealEditorScreen` has a "From library" bottom sheet. Selecting a library item copies its K/P/F/C into a regular editable nutrition row; if the meal has a blank placeholder row, that row is filled instead of appending.
+- Grow Food library items are added at 1× with no portion control. Manual (and other) items use a free-text portion multiplier (presets removed); macros are scaled before being copied into the meal row.
 - Editing a copied library row clears the source-food-item link, so the changed row is treated as manual on save.
 - `SettingsScreen` has "Import Grow Food CSV". It imports `menu_packs.csv` or `custom_config.csv` from `gf_script` into `food_items` through `GrowFoodCsvImporter`.
 - `GrowFoodCsvImporter` has an internal CSV parser that handles quoted fields and embedded newlines. It intentionally avoids a new dependency.

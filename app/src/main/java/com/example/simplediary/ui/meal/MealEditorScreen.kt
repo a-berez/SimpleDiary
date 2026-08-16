@@ -64,6 +64,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import com.example.simplediary.data.local.entity.FoodItemSource
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.flow.collectLatest
 import java.io.File
@@ -320,6 +321,7 @@ private fun FoodLibrarySheet(
 ) {
     var portionText by remember { mutableStateOf("1") }
     val portionMultiplier = portionText.parsePortionMultiplier()
+    val showPortionField = items.any { it.source != FoodItemSource.GROW_FOOD }
 
     Column(
         modifier = Modifier
@@ -341,26 +343,19 @@ private fun FoodLibrarySheet(
             singleLine = true,
             leadingIcon = { Icon(imageVector = Icons.Outlined.Search, contentDescription = null) },
         )
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (showPortionField) {
             OutlinedTextField(
                 value = portionText,
                 onValueChange = { portionText = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Portion") },
+                label = { Text("Множитель (для ручных)") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 isError = portionMultiplier == null,
+                supportingText = {
+                    Text("Для блюд Grow Food не используется")
+                },
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("0.5", "1", "1.5").forEach { value ->
-                    OutlinedButton(
-                        onClick = { portionText = value },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text("${value}x", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
         }
 
         if (items.isEmpty()) {
@@ -380,11 +375,18 @@ private fun FoodLibrarySheet(
                     items = items,
                     key = { it.id },
                 ) { item ->
+                    val isGrowFood = item.source == FoodItemSource.GROW_FOOD
+                    val effectiveMultiplier = if (isGrowFood) 1.0 else (portionMultiplier ?: 1.0)
                     FoodLibraryItemRow(
                         item = item,
-                        portionMultiplier = portionMultiplier ?: 1.0,
-                        isAddEnabled = portionMultiplier != null,
-                        onClick = { onFoodItemSelected(item.id, portionMultiplier ?: 1.0) },
+                        portionMultiplier = effectiveMultiplier,
+                        isAddEnabled = isGrowFood || portionMultiplier != null,
+                        onClick = {
+                            onFoodItemSelected(
+                                item.id,
+                                if (isGrowFood) 1.0 else (portionMultiplier ?: 1.0),
+                            )
+                        },
                     )
                 }
             }
