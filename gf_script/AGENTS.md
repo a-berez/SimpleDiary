@@ -120,6 +120,16 @@ data/YYYYMMDD-HHMMSS/
 
 `custom_config.csv` is generated from `order_details[*].order.custom_config` and joined to `order_menus[*].packs` by `packId`.
 
+Dish CSV files are cumulative:
+
+- A normal timestamped `sync` also updates stable files in `data/food_library/`.
+- When exporting into an existing output directory, the dish CSV files in that directory are merged too.
+
+- `menu_packs.csv` keeps old rows and updates/adds rows by `pack_id`.
+- `custom_config.csv` keeps old rows and updates/adds rows by `order_id_H + meal_date + meal_number + pack_id`.
+
+This is intentional. The Android app uses these CSV files to populate a reusable food library, so old dishes should remain available even if they disappear from the current active Grow Food order.
+
 ## Important JSON structures
 
 Order details:

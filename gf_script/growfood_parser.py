@@ -195,6 +195,13 @@ def run_sync(client: GrowFoodClient, out: str | None, skip_details: bool = False
     _write_menu_packs_csv(out_dir / "menu_packs.csv", menus_by_id)
     _write_custom_config_csv(out_dir / "custom_config.csv", details_by_id, menus_by_id)
 
+    if out is None:
+        library_dir = Path("data") / "food_library"
+        library_dir.mkdir(parents=True, exist_ok=True)
+        _write_menu_packs_csv(library_dir / "menu_packs.csv", menus_by_id)
+        _write_custom_config_csv(library_dir / "custom_config.csv", details_by_id, menus_by_id)
+        print(f"Updated cumulative dish CSV(s) in {library_dir.resolve()}")
+
     print(f"Exported {len(orders)} active order(s) to {out_dir.resolve()}")
     return 0
 
@@ -323,7 +330,7 @@ def _write_menu_packs_csv(path: Path, menus_by_id: dict[str, Any]) -> None:
                     ),
                 }
             )
-    _write_csv(path, fields, rows)
+    _write_csv(path, fields, rows, merge_key_fields=["pack_id"])
 
 
 def _write_custom_config_csv(
@@ -378,7 +385,12 @@ def _write_custom_config_csv(
                     "weight": _pick(pack, "weight") if isinstance(pack, dict) else "",
                 }
             )
-    _write_csv(path, fields, rows)
+    _write_csv(
+        path,
+        fields,
+        rows,
+        merge_key_fields=["order_id_H", "meal_date", "meal_number", "pack_id"],
+    )
 
 
 def _find_deliveries(value: Any) -> list[dict[str, Any]]:
@@ -405,11 +417,65 @@ def _write_json(path: Path, data: Any) -> None:
     )
 
 
-def _write_csv(path: Path, fields: list[str], rows: list[dict[str, Any]]) -> None:
+def _write_csv(
+    path: Path,
+    fields: list[str],
+    rows: list[dict[str, Any]],
+    merge_key_fields: list[str] | None = None,
+) -> None:
+    if merge_key_fields and path.exists():
+        rows = _merge_csv_rows(path, fields, rows, merge_key_fields)
+
     with path.open("w", newline="", encoding="utf-8-sig") as file:
         writer = csv.DictWriter(file, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def _merge_csv_rows(
+    path: Path,
+    fields: list[str],
+    new_rows: list[dict[str, Any]],
+    key_fields: list[str],
+) -> list[dict[str, Any]]:
+    existing_rows = _read_existing_csv_rows(path, fields)
+    merged_rows: list[dict[str, Any]] = []
+    index_by_key: dict[tuple[str, ...], int] = {}
+
+    for row in existing_rows:
+        key = _csv_row_key(row, key_fields)
+        if key is not None and key in index_by_key:
+            continue
+        if key is not None:
+            index_by_key[key] = len(merged_rows)
+        merged_rows.append(row)
+
+    for row in new_rows:
+        normalized_row = _normalize_csv_row(row, fields)
+        key = _csv_row_key(normalized_row, key_fields)
+        if key is not None and key in index_by_key:
+            merged_rows[index_by_key[key]] = normalized_row
+            continue
+        if key is not None:
+            index_by_key[key] = len(merged_rows)
+        merged_rows.append(normalized_row)
+
+    return merged_rows
+
+
+def _read_existing_csv_rows(path: Path, fields: list[str]) -> list[dict[str, Any]]:
+    with path.open("r", newline="", encoding="utf-8-sig") as file:
+        reader = csv.DictReader(file)
+        return [_normalize_csv_row(row, fields) for row in reader]
+
+
+def _normalize_csv_row(row: dict[str, Any], fields: list[str]) -> dict[str, Any]:
+    return {field: _as_str(row.get(field)) for field in fields}
+
+
+def _csv_row_key(row: dict[str, Any], key_fields: list[str]) -> tuple[str, ...] | None:
+    key = tuple(_as_str(row.get(field)).strip() for field in key_fields)
+    return key if any(key) else None
 
 
 def _first_dict(value: Any, keys: tuple[str, ...]) -> dict[str, Any] | None:
