@@ -16,7 +16,7 @@ Do not assume the delivery plan equals what the user ate. The user eats at varia
 
 ## Implemented so far
 
-- Database version 9 adds optional `hungerBefore` / `satietyAfter` (1–10) on `meals`. They are entered in the meal editor and shown on the collapsed feed card subtitle (`Голод: N · Насыщение: M`). Missing values stay null; old meals are unchanged.
+- Database version 9 adds optional `hungerBefore` / `satietyAfter` (1–10) on `meals` — two readings of the **same** hunger/satiety scale (before and after the meal). UI labels: «До приёма» / «После приёма»; collapsed feed shows `До: N · После: M`. Missing values stay null; old meals are unchanged.
 - Database version 8 adds `food_items`.
 - `FoodLibraryWriter` owns library upsert/dedup: content identity is normalized name + rounded K/P/F/C (kcal to integers, macros to 1 decimal), matching across sources so a manual row does not clone an identical Grow Food dish. Different macros keep separate rows.
 - Grow Food CSV import upserts by `sourceKey` (`pack_id`); re-import updates name/macros/ingredients in place and preserves `useCount` / `lastUsedAt` / `createdAt`. Diary `nutrition_rows` stay independent snapshots.

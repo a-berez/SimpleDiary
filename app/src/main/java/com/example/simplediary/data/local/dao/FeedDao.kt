@@ -47,7 +47,7 @@ interface FeedDao {
                             TRIM(
                                 CASE
                                     WHEN m.hungerBefore IS NULL THEN ''
-                                    ELSE ('Голод: ' || m.hungerBefore)
+                                    ELSE ('До: ' || m.hungerBefore)
                                 END ||
                                 CASE
                                     WHEN m.hungerBefore IS NOT NULL AND m.satietyAfter IS NOT NULL THEN ' · '
@@ -55,7 +55,7 @@ interface FeedDao {
                                 END ||
                                 CASE
                                     WHEN m.satietyAfter IS NULL THEN ''
-                                    ELSE ('Насыщение: ' || m.satietyAfter)
+                                    ELSE ('После: ' || m.satietyAfter)
                                 END
                             )
                         )

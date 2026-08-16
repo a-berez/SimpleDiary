@@ -193,19 +193,23 @@ fun MealEditorScreen(
             }
 
             item {
-                MealScaleSection(
-                    title = "Голод до",
-                    selected = uiState.hungerBefore,
-                    onSelected = onHungerBeforeChanged,
-                )
-            }
-
-            item {
-                MealScaleSection(
-                    title = "Насыщение после",
-                    selected = uiState.satietyAfter,
-                    onSelected = onSatietyAfterChanged,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Шкала голода / сытости",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    MealScaleSection(
+                        title = "До приёма",
+                        selected = uiState.hungerBefore,
+                        onSelected = onHungerBeforeChanged,
+                    )
+                    MealScaleSection(
+                        title = "После приёма",
+                        selected = uiState.satietyAfter,
+                        onSelected = onSatietyAfterChanged,
+                    )
+                }
             }
 
             item {
