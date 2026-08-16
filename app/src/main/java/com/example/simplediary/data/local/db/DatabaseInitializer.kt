@@ -76,6 +76,13 @@ object DatabaseInitializer {
         }
     }
 
+    val migration8To9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE meals ADD COLUMN hungerBefore INTEGER")
+            db.execSQL("ALTER TABLE meals ADD COLUMN satietyAfter INTEGER")
+        }
+    }
+
     fun onCreate(db: SupportSQLiteDatabase) {
         createWorkoutMetadataTables(db)
         seedDefaultWorkoutMetadata(db)

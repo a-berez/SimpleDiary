@@ -16,6 +16,7 @@ Do not assume the delivery plan equals what the user ate. The user eats at varia
 
 ## Implemented so far
 
+- Database version 9 adds optional `hungerBefore` / `satietyAfter` (1–10) on `meals`. They are entered in the meal editor and shown on the collapsed feed card subtitle (`Голод: N · Насыщение: M`). Missing values stay null; old meals are unchanged.
 - Database version 8 adds `food_items`.
 - `FoodItemDao` supports basic listing/search, source-key lookup, exact manual match lookup, and usage marking.
 - Saving a meal now auto-adds named manual nutrition rows to `food_items` or increments usage for an exact manual match.

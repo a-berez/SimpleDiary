@@ -61,7 +61,7 @@ class ZipCsvExporter(
     ): String {
         val builder = StringBuilder()
         builder.append(
-            "Дата;Заметка;Продукт;Калории;Белки;Жиры;Углеводы\n"
+            "Дата;Заметка;Голод до;Насыщение после;Продукт;Калории;Белки;Жиры;Углеводы\n"
         )
         meals.forEach { mealWithRows ->
             val meal = mealWithRows.meal
@@ -69,6 +69,8 @@ class ZipCsvExporter(
                 builder.appendCsvRow(
                     formatTimestamp(meal.timestampEpochMillis),
                     meal.text,
+                    meal.hungerBefore,
+                    meal.satietyAfter,
                     "",
                     "",
                     "",
@@ -80,6 +82,8 @@ class ZipCsvExporter(
                     builder.appendCsvRow(
                         formatTimestamp(meal.timestampEpochMillis),
                         meal.text,
+                        meal.hungerBefore,
+                        meal.satietyAfter,
                         row.itemName,
                         row.caloriesKcal,
                         row.proteinsGrams,

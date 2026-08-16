@@ -30,14 +30,36 @@ interface FeedDao {
                     'Meal'
                 ) AS title,
                 (
-                    SELECT
-                        ('Items: ' || COUNT(*) ||
-                        ' • K:' || CAST(ROUND(COALESCE(SUM(nr.caloriesKcal), 0.0), 0) AS INTEGER) ||
-                        ' P:' || CAST(ROUND(COALESCE(SUM(nr.proteinsGrams), 0.0), 0) AS INTEGER) ||
-                        ' F:' || CAST(ROUND(COALESCE(SUM(nr.fatsGrams), 0.0), 0) AS INTEGER) ||
-                        ' C:' || CAST(ROUND(COALESCE(SUM(nr.carbsGrams), 0.0), 0) AS INTEGER))
-                    FROM nutrition_rows nr
-                    WHERE nr.mealId = m.id
+                    (
+                        SELECT
+                            ('Items: ' || COUNT(*) ||
+                            ' • K:' || CAST(ROUND(COALESCE(SUM(nr.caloriesKcal), 0.0), 0) AS INTEGER) ||
+                            ' P:' || CAST(ROUND(COALESCE(SUM(nr.proteinsGrams), 0.0), 0) AS INTEGER) ||
+                            ' F:' || CAST(ROUND(COALESCE(SUM(nr.fatsGrams), 0.0), 0) AS INTEGER) ||
+                            ' C:' || CAST(ROUND(COALESCE(SUM(nr.carbsGrams), 0.0), 0) AS INTEGER))
+                        FROM nutrition_rows nr
+                        WHERE nr.mealId = m.id
+                    ) ||
+                    CASE
+                        WHEN m.hungerBefore IS NULL AND m.satietyAfter IS NULL THEN ''
+                        ELSE (
+                            CHAR(10) ||
+                            TRIM(
+                                CASE
+                                    WHEN m.hungerBefore IS NULL THEN ''
+                                    ELSE ('Голод: ' || m.hungerBefore)
+                                END ||
+                                CASE
+                                    WHEN m.hungerBefore IS NOT NULL AND m.satietyAfter IS NOT NULL THEN ' · '
+                                    ELSE ''
+                                END ||
+                                CASE
+                                    WHEN m.satietyAfter IS NULL THEN ''
+                                    ELSE ('Насыщение: ' || m.satietyAfter)
+                                END
+                            )
+                        )
+                    END
                 ) AS subtitle,
                 (
                     SELECT

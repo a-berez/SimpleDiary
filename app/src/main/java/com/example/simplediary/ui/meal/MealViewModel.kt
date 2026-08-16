@@ -93,6 +93,14 @@ class MealViewModel(
         _uiState.update { it.copy(note = note) }
     }
 
+    fun onHungerBeforeChanged(value: Int?) {
+        _uiState.update { it.copy(hungerBefore = value.normalizedScale()) }
+    }
+
+    fun onSatietyAfterChanged(value: Int?) {
+        _uiState.update { it.copy(satietyAfter = value.normalizedScale()) }
+    }
+
     fun onAddNutritionRow() {
         _uiState.update { state ->
             state.copy(nutritionRows = state.nutritionRows + NutritionRowInput())
@@ -171,6 +179,8 @@ class MealViewModel(
                     timestampEpochMillis = meal.timestampEpochMillis,
                     note = meal.text,
                     photoPath = meal.photoPath,
+                    hungerBefore = meal.hungerBefore.normalizedScale(),
+                    satietyAfter = meal.satietyAfter.normalizedScale(),
                     nutritionRows = if (rows.isEmpty()) {
                         listOf(NutritionRowInput())
                     } else {
@@ -211,6 +221,8 @@ class MealViewModel(
                         text = state.note.trim(),
                         photoPath = state.photoPath,
                         timestampEpochMillis = state.timestampEpochMillis,
+                        hungerBefore = state.hungerBefore.normalizedScale(),
+                        satietyAfter = state.satietyAfter.normalizedScale(),
                     )
                 )
             } else {
@@ -220,6 +232,8 @@ class MealViewModel(
                         text = state.note.trim(),
                         photoPath = state.photoPath,
                         timestampEpochMillis = state.timestampEpochMillis,
+                        hungerBefore = state.hungerBefore.normalizedScale(),
+                        satietyAfter = state.satietyAfter.normalizedScale(),
                     )
                 )
                 nutritionRowDao.deleteByMealId(mealId)
@@ -385,6 +399,8 @@ data class MealUiState(
     val timestampEpochMillis: Long,
     val photoPath: String? = null,
     val note: String = "",
+    val hungerBefore: Int? = null,
+    val satietyAfter: Int? = null,
     val nutritionRows: List<NutritionRowInput>,
     val foodSearchQuery: String = "",
     val foodItems: List<FoodItemUiModel> = emptyList(),
@@ -439,5 +455,11 @@ private fun Double?.scaledBy(multiplier: Double): String? {
     return this?.let { (it * multiplier).toCleanString() }
 }
 
+private fun Int?.normalizedScale(): Int? {
+    return this?.takeIf { it in MEAL_SCALE_MIN..MEAL_SCALE_MAX }
+}
+
 private const val DEFAULT_ITEM_NAME = "Item"
 private const val MAX_VISIBLE_FOOD_ITEMS = 50
+const val MEAL_SCALE_MIN = 1
+const val MEAL_SCALE_MAX = 10

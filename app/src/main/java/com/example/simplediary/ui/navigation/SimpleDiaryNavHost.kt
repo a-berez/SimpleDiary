@@ -86,6 +86,8 @@ fun SimpleDiaryNavHost(
                 uiState = uiState,
                 onTimestampChanged = mealViewModel::onTimestampChanged,
                 onNoteChanged = mealViewModel::onNoteChanged,
+                onHungerBeforeChanged = mealViewModel::onHungerBeforeChanged,
+                onSatietyAfterChanged = mealViewModel::onSatietyAfterChanged,
                 onRowChanged = mealViewModel::onNutritionRowChanged,
                 onDeleteRow = mealViewModel::onDeleteNutritionRow,
                 onAddRow = mealViewModel::onAddNutritionRow,

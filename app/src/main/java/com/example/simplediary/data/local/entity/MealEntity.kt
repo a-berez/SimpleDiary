@@ -16,4 +16,8 @@ data class MealEntity(
     val text: String,
     val photoPath: String?,
     val timestampEpochMillis: Long,
+    /** Hunger before the meal, 1–10, or null if not set. */
+    val hungerBefore: Int? = null,
+    /** Satiety after the meal, 1–10, or null if not set. */
+    val satietyAfter: Int? = null,
 )
